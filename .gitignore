@@ -1,0 +1,24 @@
+# Generic
+
+*.pyc
+*~
+Makefile
+Makefile.in
+*.deps
+*.libs
+*.la
+*.lo
+*.loT
+.*.sw?
+*.service
+
+# Absolute
+
+aclocal.m4
+autom4te.cache
+config.log
+config.status
+configure
+install-sh
+missing
+py-compile
