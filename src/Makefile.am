@@ -5,8 +5,8 @@ service_DATA = $(service_in_files:.service.in=.service)
 $(service_DATA): $(service_in_files) Makefile
 	@sed -e "s|\@bindir\@|$(bindir)|" $< > $@
 
-sugardir = $(pkgdatadir)/services/presence
-sugar_PYTHON = \
+psdatadir = $(datadir)/sugar/services/presence
+psdata_PYTHON = \
 	__init__.py \
 	activity.py \
 	buddy.py \
@@ -26,6 +26,6 @@ EXTRA_DIST = $(service_in_files)
 dist_check_SCRIPTS = test_psutils.py
 
 TESTS_ENVIRONMENT = \
-		    PYTHONPATH=$(top_srcdir):$(top_srcdir)/services/presence \
+		    PYTHONPATH=$(top_srcdir) \
 		    $(PYTHON)
 TESTS = $(dist_check_SCRIPTS)
