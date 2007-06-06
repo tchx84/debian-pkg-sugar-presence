@@ -1,9 +1,12 @@
 servicedir = $(datadir)/dbus-1/services
-service_in_files = org.laptop.Sugar.Presence.service.in
-service_DATA = $(service_in_files:.service.in=.service)
+service_DATA = org.laptop.Sugar.Presence.service
 
-$(service_DATA): $(service_in_files) Makefile
-	@sed -e "s|\@bindir\@|$(bindir)|" $< > $@
+$(service_DATA): Makefile
+	( \
+	echo '[D-BUS Service]'; \
+	echo 'Name = org.laptop.Sugar.Presence'; \
+	echo 'Exec = $(bindir)/sugar-presence-service'; \
+	) > $@
 
 psdatadir = $(datadir)/sugar/services/presence
 psdata_PYTHON = \
@@ -20,8 +23,6 @@ psdata_PYTHON = \
 dist_bin_SCRIPTS = sugar-presence-service
 
 DISTCLEANFILES = $(service_DATA)
-
-EXTRA_DIST = $(service_in_files)
 
 dist_check_SCRIPTS = test_psutils.py
 
