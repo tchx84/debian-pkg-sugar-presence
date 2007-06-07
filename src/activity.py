@@ -503,14 +503,10 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _joined_cb(self, tp, activity_id, room_handle, text_channel):
+    def _joined_cb(self, tp, text_channel):
         """XXX - not documented yet
         """
-        assert activity_id == self.props.id
-
-        tp.emit_joined_activity(activity_id, room_handle)
-
-        self._room = room_handle
+        tp.emit_joined_activity(self._id, self._room)
 
         verb = self._join_is_sharing and 'Share' or 'Join'
 
@@ -535,8 +531,7 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
 
-    def _join_activity_channel_props_listed_cb(self, tp, activity_id,
-                                               handle, channel, props,
+    def _join_activity_channel_props_listed_cb(self, tp, channel, props,
                                                prop_specs):
 
         props_to_set = []
@@ -551,14 +546,16 @@ class Activity(ExportedGObject):
 
         if props_to_set:
             channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
-                reply_handler=lambda: self._joined_cb(tp, activity_id, handle,
-                    channel),
+                reply_handler=lambda: self._joined_cb(tp, channel),
                 error_handler=self._join_failed_cb)
         else:
-            self._joined_cb(tp, activity_id, handle, channel)
+            self._joined_cb(tp, channel)
 
     def _join_activity_create_channel_cb(self, tp, activity_id, handle,
                                          chan_path):
+        assert activity_id == self.props.id
+        self._room = handle
+
         channel = Channel(tp.get_connection().service_name, chan_path)
         props = {
             'anonymous': False,         # otherwise buddy resolution breaks
@@ -570,7 +567,7 @@ class Activity(ExportedGObject):
         channel[PROPERTIES_INTERFACE].ListProperties(
             reply_handler=lambda prop_specs:
                 self._join_activity_channel_props_listed_cb(tp,
-                    activity_id, handle, channel, props, prop_specs),
+                    channel, props, prop_specs),
             error_handler=self._join_failed_cb)
 
     def join(self, async_cb, async_err_cb, sharing):
