@@ -519,7 +519,7 @@ class Activity(ExportedGObject):
             async_cb(dbus.ObjectPath(self._object_path))
             _logger.debug("Share of activity %s succeeded." % self._id)
 
-    def _share(self, (async_cb, async_err_cb), owner):
+    def _share(self, async_cb, async_err_cb, owner):
         """XXX - not documented yet
 
         XXX - This method is called externally by the PresenceService

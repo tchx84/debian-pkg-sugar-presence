@@ -453,7 +453,7 @@ class PresenceService(ExportedGObject):
     def ShareActivity(self, actid, atype, name, properties, async_cb,
                       async_err_cb):
         self._share_activity(actid, atype, name, properties,
-                             (async_cb, async_err_cb))
+                             async_cb, async_err_cb)
 
     @dbus.service.method(_PRESENCE_INTERFACE,
                          in_signature='', out_signature="so")
@@ -465,7 +465,8 @@ class PresenceService(ExportedGObject):
         for tp in self._handles_buddies:
             tp.cleanup()
 
-    def _share_activity(self, actid, atype, name, properties, callbacks):
+    def _share_activity(self, actid, atype, name, properties, async_cb,
+                        async_err_cb):
         objid = self._get_next_object_id()
         # FIXME check which tp client we should use to share the activity
         color = self._owner.props.color
@@ -476,7 +477,7 @@ class PresenceService(ExportedGObject):
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         self._activities[actid] = activity
-        activity._share(callbacks, self._owner)
+        activity._share(async_cb, async_err_cb, self._owner)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already
