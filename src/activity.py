@@ -507,6 +507,8 @@ class Activity(ExportedGObject):
         (sigid, owner, async_cb, async_err_cb) = userdata
         self._tp.disconnect(sigid)
 
+        self._room = room_handle
+
         if exc:
             _logger.debug("Share of activity %s failed: %s" % (self._id, exc))
             async_err_cb(exc)
@@ -543,6 +545,8 @@ class Activity(ExportedGObject):
 
         (sigid, async_cb, async_err_cb) = userdata
         self._tp.disconnect(sigid)
+
+        self._room = room_handle
 
         if exc:
             async_err_cb(exc)
