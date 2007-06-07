@@ -120,7 +120,9 @@ class ServerPlugin(gobject.GObject):
             (gobject.SIGNAL_RUN_FIRST, None, [int, int]),
         'avatar-updated':
             # Contact's avatar has changed
-            # args: contact handle: int; icon data: str
+            # args:
+            #   contact handle: int
+            #   icon data: str
             (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'buddy-properties-changed':
             # OLPC buddy properties changed; as for PropertiesChanged
@@ -137,30 +139,39 @@ class ServerPlugin(gobject.GObject):
             (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'activity-invitation':
             # We were invited to join an activity
-            # args: activity ID: str
-            (gobject.SIGNAL_RUN_FIRST, None, [object]),
+            # args:
+            #   activity ID: str
+            #   activity room handle: int or long
+            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'private-invitation':
             # We were invited to join a chat or a media call
-            # args: channel object path
+            # args:
+            #   channel object path
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
         'activity-properties-changed':
             # An activity's properties changed; as for
             # ActivityPropertiesChanged
-            # args: activity ID: str; properties: dict { str => object }
+            # args:
+            #   activity ID: str
+            #   activity room handle: int or long
+            #   properties: dict { str => object }
             # FIXME: are these all the properties or just those that changed?
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object]),
         'activity-shared':
             # share_activity() succeeded
             # args:
             #   activity ID: str
+            #   activity room handle: int or long
             #   channel: telepathy.client.Channel, or None on failure
             #   error: None, or Exception on failure
             #   userdata as passed to share_activity
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object,
+                                              object]),
         'activity-joined':
             # join_activity() succeeded
             # args: as for activity-shared
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object,
+                                              object]),
     }
 
     def __init__(self, registry, owner, icon_cache):

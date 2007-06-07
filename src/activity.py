@@ -492,7 +492,8 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _shared_cb(self, tp, activity_id, text_channel, exc, userdata):
+    def _shared_cb(self, tp, activity_id, room_handle, text_channel, exc,
+                   userdata):
         """XXX - not documented yet
         """
         if activity_id != self.props.id:
@@ -528,7 +529,8 @@ class Activity(ExportedGObject):
                                                 async_err_cb))
         _logger.debug("done with share attempt %s" % self._id)
 
-    def _joined_cb(self, tp, activity_id, text_channel, exc, userdata):
+    def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc,
+                   userdata):
         """XXX - not documented yet
         """
         if activity_id != self.props.id:

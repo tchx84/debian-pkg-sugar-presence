@@ -282,7 +282,7 @@ class PresenceService(ExportedGObject):
 
             activity.buddy_apparently_left(buddy)
 
-    def _activity_invitation(self, tp, act_id):
+    def _activity_invitation(self, tp, act_id, act_handle):
         activity = self._activities.get(act_id)
         if activity:
             self.ActivityInvitation(activity.object_path())
@@ -496,7 +496,7 @@ class PresenceService(ExportedGObject):
             _logger.debug("Activity disappeared: %s (%s)", activity.props.name,
                           activity.props.id)
 
-    def _activity_properties_changed(self, tp, act_id, props):
+    def _activity_properties_changed(self, tp, act_id, act_handle, props):
         activity = self._activities.get(act_id)
         if activity:
             activity.set_properties(props)
