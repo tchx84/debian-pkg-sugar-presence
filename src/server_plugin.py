@@ -485,8 +485,7 @@ class ServerPlugin(gobject.GObject):
 
         self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
             HANDLE_TYPE_ROOM, handles[0], True,
-            reply_handler=lambda path: callback(self, activity_id,
-                handles[0], path),
+            reply_handler=lambda path: callback(handles[0], path),
             error_handler=err_cb)
 
     def join_activity(self, activity_id, callback, err_cb):
@@ -496,8 +495,6 @@ class ServerPlugin(gobject.GObject):
         activity_id -- unique ID for the activity
         callback -- callback to be called when the join succeeds or fails,
             with arguments:
-                self
-                activity ID: str
                 activity room handle: int or long
                 channel: object path
         err_cb -- callback to be called on failure, with one Exception argument

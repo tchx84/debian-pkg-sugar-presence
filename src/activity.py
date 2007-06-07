@@ -551,9 +551,7 @@ class Activity(ExportedGObject):
         else:
             self._joined_cb(tp, channel)
 
-    def _join_activity_create_channel_cb(self, tp, activity_id, handle,
-                                         chan_path):
-        assert activity_id == self._id
+    def _join_activity_create_channel_cb(self, handle, chan_path):
         self._room = handle
 
         channel = Channel(tp.get_connection().service_name, chan_path)
