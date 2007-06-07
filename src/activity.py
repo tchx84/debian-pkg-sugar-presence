@@ -164,12 +164,12 @@ class Activity(ExportedGObject):
 
         ExportedGObject.__init__(self, bus, self._object_path,
                                  gobject_properties=kwargs)
-        if self.props.local and not self.props.valid:
+        if self._local and not self._valid:
             raise RuntimeError("local activities require color, type, and "
                                "name")
 
         # If not yet valid, query activity properties
-        if not self.props.valid:
+        if not self._valid:
             tp.update_activity_properties(self._id)
 
     def do_get_property(self, pspec):
@@ -295,7 +295,7 @@ class Activity(ExportedGObject):
 
         :Returns: Activity ID as a string
         """
-        return self.props.id
+        return self._id
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
@@ -304,7 +304,7 @@ class Activity(ExportedGObject):
 
         :Returns: Activity colour as a string in the format #RRGGBB,#RRGGBB
         """
-        return self.props.color
+        return self._color
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
@@ -314,7 +314,7 @@ class Activity(ExportedGObject):
         :Returns: Activity type as a string, in the same form as a D-Bus
             well-known name
         """
-        return self.props.type
+        return self._type
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature="", out_signature="",
@@ -370,7 +370,7 @@ class Activity(ExportedGObject):
 
         returns Activity name
         """
-        return self.props.name
+        return self._actname
 
     # methods
     def object_path(self):
@@ -421,7 +421,7 @@ class Activity(ExportedGObject):
 
         for buddy in buddies:
             buddy.add_activity(self)
-            if self.props.valid:
+            if self._valid:
                 self.BuddyJoined(buddy.object_path())
 
     def _remove_buddies(self, buddies):
@@ -434,7 +434,7 @@ class Activity(ExportedGObject):
 
         for buddy in buddies:
             buddy.remove_activity(self)
-            if self.props.valid:
+            if self._valid:
                 self.BuddyJoined(buddy.object_path())
 
         if not self._buddies:
@@ -553,7 +553,7 @@ class Activity(ExportedGObject):
 
     def _join_activity_create_channel_cb(self, tp, activity_id, handle,
                                          chan_path):
-        assert activity_id == self.props.id
+        assert activity_id == self._id
         self._room = handle
 
         channel = Channel(tp.get_connection().service_name, chan_path)
@@ -585,20 +585,20 @@ class Activity(ExportedGObject):
 
         if self._joined:
             async_err_cb(RuntimeError("Already joined activity %s"
-                                      % self.props.id))
+                                      % self._id))
             return
 
         if self._join_cb is not None:
             # FIXME: or should we trigger all the attempts?
             async_err_cb(RuntimeError('Already trying to join activity %s'
-                                      % self.props.id))
+                                      % self._id))
             return
 
         self._join_cb = async_cb
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
 
-        self._tp.join_activity(self.props.id, self._join_activity_create_channel_cb,
+        self._tp.join_activity(self._id, self._join_activity_create_channel_cb,
                                self._join_failed_cb)
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
@@ -690,7 +690,7 @@ class Activity(ExportedGObject):
         for (key, value) in self._custom_props.items():
             props[key] = value
 
-        self._tp.set_activity_properties(self.props.id, props)
+        self._tp.set_activity_properties(self._id, props)
 
     def set_properties(self, properties):
         """Sets name, colour and/or type properties for this activity all
@@ -732,7 +732,7 @@ class Activity(ExportedGObject):
 
         # Set custom properties
         if len(cprops.keys()) > 0:
-            self.props.custom_props = cprops
+            self._custom_props = cprops
 
         if changed:
             self._update_validity()
