@@ -35,6 +35,7 @@ from sugar import util
 from server_plugin import ServerPlugin
 from linklocal_plugin import LinkLocalPlugin
 from buddy import Buddy, ShellOwner
+from buddyiconcache import BuddyIconCache
 from activity import Activity
 from psutils import pubkey_to_keyid
 
@@ -67,6 +68,8 @@ class PresenceService(ExportedGObject):
         self._next_object_id = 0
         self._connected = False
 
+        self._icon_cache = BuddyIconCache()
+
         # all Buddy objects
         # identifier -> Buddy, GC'd when no more refs exist
         self._buddies = WeakValueDictionary()
@@ -98,7 +101,8 @@ class PresenceService(ExportedGObject):
         self._registry.LoadManagers()
 
         # Set up the server connection
-        self._server_plugin = ServerPlugin(self._registry, self._owner)
+        self._server_plugin = ServerPlugin(self._registry, self._owner,
+                                           self._icon_cache)
         self._handles_buddies[self._server_plugin] = {}
 
         self._server_plugin.connect('status', self._server_status_cb)

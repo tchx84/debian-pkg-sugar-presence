@@ -48,7 +48,6 @@ from telepathy.constants import (HANDLE_TYPE_CONTACT,
 from sugar import util
 
 # Presence Service local modules
-from buddyiconcache import BuddyIconCache
 import psutils
 
 
@@ -164,7 +163,7 @@ class ServerPlugin(gobject.GObject):
             (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object]),
     }
 
-    def __init__(self, registry, owner):
+    def __init__(self, registry, owner, icon_cache):
         """Initialize the ServerPlugin instance
 
         registry -- telepathy.client.ManagerRegistry from the
@@ -176,7 +175,7 @@ class ServerPlugin(gobject.GObject):
         gobject.GObject.__init__(self)
 
         self._conn = None
-        self._icon_cache = BuddyIconCache()
+        self._icon_cache = icon_cache
 
         self._registry = registry
         self._online_contacts = {}  # handle -> jid
