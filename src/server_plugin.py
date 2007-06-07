@@ -482,7 +482,7 @@ class ServerPlugin(gobject.GObject):
                                             channel, userdata):
         self._joined_activities.append((activity_id, handle))
         self._set_self_activities()
-        self.emit('activity-joined', activity_id, channel, None, userdata)
+        self.emit('activity-joined', activity_id, handle, channel, None, userdata)
 
     def _join_activity_channel_props_listed_cb(self, activity_id,
                                                handle, channel, userdata,
@@ -533,7 +533,7 @@ class ServerPlugin(gobject.GObject):
         if (activity_id, handles[0]) in self._joined_activities:
             e = RuntimeError("Already joined activity %s" % activity_id)
             _logger.debug('%s', e)
-            self.emit('activity-joined', activity_id, None, e, userdata)
+            self.emit('activity-joined', activity_id, handles[0], None, e, userdata)
             return
 
         self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
@@ -548,7 +548,7 @@ class ServerPlugin(gobject.GObject):
         e = Exception("Error joining/sharing activity %s: (%s): %s"
                       % (activity_id, where, err))
         _logger.debug('%s', e)
-        self.emit('activity-joined', activity_id, None, e, userdata)
+        self.emit('activity-joined', activity_id, 0, None, e, userdata)
 
     def _internal_join_activity(self, activity_id, userdata):
         handle = self._activities.get(activity_id)
