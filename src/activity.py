@@ -320,7 +320,7 @@ class Activity(ExportedGObject):
                         unsuccessful
 
         """
-        self.join(async_cb, async_err_cb)
+        self.join(lambda unused: async_cb(), async_err_cb)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="ao")
@@ -496,29 +496,6 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _shared_cb(self, tp, activity_id, room_handle, text_channel, exc,
-                   userdata):
-        """XXX - not documented yet
-        """
-        if activity_id != self.props.id:
-            # Not for us
-            return
-
-        (sigid, owner, async_cb, async_err_cb) = userdata
-        self._tp.disconnect(sigid)
-
-        self._room = room_handle
-
-        if exc:
-            _logger.debug("Share of activity %s failed: %s" % (self._id, exc))
-            async_err_cb(exc)
-        else:
-            self._handle_share_join(tp, text_channel)
-            self.send_properties()
-            owner.add_activity(self)
-            async_cb(dbus.ObjectPath(self._object_path))
-            _logger.debug("Share of activity %s succeeded." % self._id)
-
     def _share(self, async_cb, async_err_cb, owner):
         """XXX - not documented yet
 
@@ -530,9 +507,10 @@ class Activity(ExportedGObject):
             async_err_cb(RuntimeError("Already shared activity %s"
                                       % self.props.id))
             return
-        sigid = self._tp.connect('activity-shared', self._shared_cb)
-        self._tp.share_activity(self.props.id, (sigid, owner, async_cb,
-                                                async_err_cb))
+        sigid = self._tp.connect('activity-shared', self._joined_cb)
+        self._tp.share_activity(self.props.id, (sigid, async_cb,
+                                                async_err_cb, True))
+        self._owner = owner
         _logger.debug("done with share attempt %s" % self._id)
 
     def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc,
@@ -543,16 +521,24 @@ class Activity(ExportedGObject):
             # Not for us
             return
 
-        (sigid, async_cb, async_err_cb) = userdata
+        (sigid, async_cb, async_err_cb, am_sharing) = userdata
         self._tp.disconnect(sigid)
 
         self._room = room_handle
 
+        verb = am_sharing and 'Share' or 'Join'
         if exc:
+            _logger.debug("%s of activity %s failed: %s" % (verb, self._id,
+                          exc))
             async_err_cb(exc)
         else:
             self._handle_share_join(tp, text_channel)
-            async_cb()
+            if am_sharing:
+                self.send_properties()
+                assert self._owner is not None
+                self._owner.add_activity(self)
+            async_cb(dbus.ObjectPath(self._object_path))
+            _logger.debug("%s of activity %s succeeded" % (verb, self._id))
 
     def join(self, async_cb, async_err_cb):
         """Local method for the local user to attempt to join the activity.
@@ -570,7 +556,8 @@ class Activity(ExportedGObject):
                                       % self.props.id))
             return
         sigid = self._tp.connect('activity-joined', self._joined_cb)
-        self._tp.join_activity(self.props.id, (sigid, async_cb, async_err_cb))
+        self._tp.join_activity(self.props.id, (sigid, async_cb, async_err_cb,
+                                               False))
 
     def get_channels(self):
         """Local method to get the list of channels associated with this
