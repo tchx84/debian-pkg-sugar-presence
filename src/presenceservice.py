@@ -219,10 +219,10 @@ class PresenceService(ExportedGObject):
             _logger.debug("Buddy %s properties updated: %s", buddy.props.nick,
                           properties.keys())
 
-    def _new_activity(self, activity_id, tp):
+    def _new_activity(self, activity_id, tp, room):
         try:
             objid = self._get_next_object_id()
-            activity = Activity(self._session_bus, objid, self, tp,
+            activity = Activity(self._session_bus, objid, self, tp, room,
                                 id=activity_id)
         except Exception:
             # FIXME: catching bare Exception considered harmful
@@ -242,10 +242,7 @@ class PresenceService(ExportedGObject):
         del self._activities[activity.props.id]
 
     def _buddy_activities_changed(self, tp, contact_handle, activities):
-        acts = []
-        for act in activities:
-            acts.append(str(act))
-        _logger.debug("Handle %s activities changed: %s", contact_handle, acts)
+        _logger.debug("Handle %s activities changed: %s", contact_handle, activities)
         buddies = self._handles_buddies[tp]
         buddy = buddies.get(contact_handle)
 
@@ -260,7 +257,7 @@ class PresenceService(ExportedGObject):
         for activity in buddy.get_joined_activities():
             old_activities.add(activity.props.id)
 
-        new_activities = set(activities)
+        new_activities = set(activities.iterkeys())
 
         activities_joined = new_activities - old_activities
         for act in activities_joined:
@@ -268,7 +265,7 @@ class PresenceService(ExportedGObject):
             activity = self._activities.get(act)
             if activity is None:
                 # new activity, can fail
-                activity = self._new_activity(act, tp)
+                activity = self._new_activity(act, tp, activities[act])
 
             if activity is not None:
                 activity.buddy_apparently_joined(buddy)
@@ -473,7 +470,8 @@ class PresenceService(ExportedGObject):
         # FIXME check which tp client we should use to share the activity
         color = self._owner.props.color
         activity = Activity(self._session_bus, objid, self,
-                            self._server_plugin, id=actid, type=atype,
+                            self._server_plugin, 0,
+                            id=actid, type=atype,
                             name=name, color=color, local=True)
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)

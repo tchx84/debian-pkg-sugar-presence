@@ -81,7 +81,7 @@ class Activity(ExportedGObject):
 
     _RESERVED_PROPNAMES = __gproperties__.keys()
 
-    def __init__(self, bus, object_id, ps, tp, **kwargs):
+    def __init__(self, bus, object_id, ps, tp, room, **kwargs):
         """Initializes the activity and sets its properties to default values.
 
         :Parameters:
@@ -93,6 +93,9 @@ class Activity(ExportedGObject):
                 The presence service
             `tp` : server plugin
                 The server plugin object (stands for "telepathy plugin")
+            `room` : int or long
+                The handle (of type HANDLE_TYPE_ROOM) of the activity on
+                the server plugin
         :Keywords:
             `id` : str
                 The globally unique activity ID (required)
@@ -126,6 +129,7 @@ class Activity(ExportedGObject):
 
         # the telepathy client
         self._tp = tp
+        self._room = room
         self._self_handle = None
         self._text_channel = None
         self._text_channel_group_flags = 0

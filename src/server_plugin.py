@@ -135,7 +135,7 @@ class ServerPlugin(gobject.GObject):
             # OLPC activities changed
             # args:
             #   contact handle: int
-            #   activity IDs: list of str
+            #   activities: dict {activity_id: str => room: int or long}
             (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'activity-invitation':
             # We were invited to join an activity
@@ -995,10 +995,11 @@ class ServerPlugin(gobject.GObject):
                 not self._online_contacts[handle]):
             return
 
+        activities_dict = {}
         for act_id, act_handle in activities:
             self._activities[act_id] = act_handle
-        activities_id = map(lambda x: x[0], activities)
-        self.emit("buddy-activities-changed", handle, activities_id)
+            activities_dict[act_id] = act_handle
+        self.emit("buddy-activities-changed", handle, activities_dict)
 
     def _buddy_current_activity_changed_cb(self, handle, activity, channel):
         """Handle update of given user (handle)'s current activity"""
