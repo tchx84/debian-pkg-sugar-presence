@@ -458,7 +458,7 @@ class Activity(ExportedGObject):
         self._text_channel_group_flags |= added
         self._text_channel_group_flags &= ~removed
 
-    def _handle_share_join(self, tp, text_channel):
+    def _handle_share_join(self, text_channel):
         """Called when a join to a network activity was successful.
 
         Called by the _shared_cb and _joined_cb methods.
@@ -503,15 +503,15 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _joined_cb(self, tp, text_channel):
+    def _joined_cb(self, text_channel):
         """XXX - not documented yet
         """
-        tp.emit_joined_activity(self._id, self._room)
+        self._tp.emit_joined_activity(self._id, self._room)
 
         verb = self._join_is_sharing and 'Share' or 'Join'
 
         try:
-            self._handle_share_join(tp, text_channel)
+            self._handle_share_join(text_channel)
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
@@ -531,7 +531,7 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
 
-    def _join_activity_channel_props_listed_cb(self, tp, channel, props,
+    def _join_activity_channel_props_listed_cb(self, channel, props,
                                                prop_specs):
 
         props_to_set = []
@@ -546,15 +546,15 @@ class Activity(ExportedGObject):
 
         if props_to_set:
             channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
-                reply_handler=lambda: self._joined_cb(tp, channel),
+                reply_handler=lambda: self._joined_cb(channel),
                 error_handler=self._join_failed_cb)
         else:
-            self._joined_cb(tp, channel)
+            self._joined_cb(channel)
 
     def _join_activity_create_channel_cb(self, handle, chan_path):
         self._room = handle
 
-        channel = Channel(tp.get_connection().service_name, chan_path)
+        channel = Channel(self._tp.get_connection().service_name, chan_path)
         props = {
             'anonymous': False,         # otherwise buddy resolution breaks
             'invite-only': False,       # XXX: should be True in future
@@ -564,7 +564,7 @@ class Activity(ExportedGObject):
         }
         channel[PROPERTIES_INTERFACE].ListProperties(
             reply_handler=lambda prop_specs:
-                self._join_activity_channel_props_listed_cb(tp,
+                self._join_activity_channel_props_listed_cb(
                     channel, props, prop_specs),
             error_handler=self._join_failed_cb)
 
