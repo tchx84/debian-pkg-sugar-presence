@@ -1019,7 +1019,7 @@ class ServerPlugin(gobject.GObject):
                     if local_pending:
                         for act_id, act_handle in self._activities.iteritems():
                             if handle == act_handle:
-                                self.emit('activity-invitation', act_id)
+                                self.emit('activity-invitation', act_id, handle)
                 def got_all_members_err(e):
                     logger.debug('Unable to get channel members for %s:',
                                  object_path, exc_info=1)
