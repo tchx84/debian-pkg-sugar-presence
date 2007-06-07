@@ -503,9 +503,7 @@ class Activity(ExportedGObject):
     def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc):
         """XXX - not documented yet
         """
-        if activity_id != self.props.id:
-            # Not for us
-            return
+        assert activity_id == self.props.id
 
         self._room = room_handle
 
