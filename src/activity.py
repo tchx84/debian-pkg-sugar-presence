@@ -531,9 +531,15 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
 
-    def _join_activity_channel_props_listed_cb(self, channel, props,
+    def _join_activity_channel_props_listed_cb(self, channel,
                                                prop_specs):
-
+        props = {
+            'anonymous': False,         # otherwise buddy resolution breaks
+            'invite-only': False,       # XXX: should be True in future
+            #'name': ...                # XXX: set from activity name?
+            'persistent': False,        # vanish when there are no members
+            'private': False,           # XXX: should be True unless public
+        }
         props_to_set = []
         for ident, name, sig, flags in prop_specs:
             value = props.pop(name, None)
@@ -555,17 +561,10 @@ class Activity(ExportedGObject):
         self._room = handle
 
         channel = Channel(self._tp.get_connection().service_name, chan_path)
-        props = {
-            'anonymous': False,         # otherwise buddy resolution breaks
-            'invite-only': False,       # XXX: should be True in future
-            #'name': ...                # XXX: set from activity name?
-            'persistent': False,        # vanish when there are no members
-            'private': False,           # XXX: should be True unless public
-        }
         channel[PROPERTIES_INTERFACE].ListProperties(
             reply_handler=lambda prop_specs:
                 self._join_activity_channel_props_listed_cb(
-                    channel, props, prop_specs),
+                    channel, prop_specs),
             error_handler=self._join_failed_cb)
 
     def join(self, async_cb, async_err_cb, sharing):
