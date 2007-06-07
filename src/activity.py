@@ -443,8 +443,9 @@ class Activity(ExportedGObject):
         if not self._joined:
             self._remove_buddies((buddy,))
 
-    def _text_channel_group_flags_changed_cb(self, flags):
-        self._text_channel_group_flags = flags
+    def _text_channel_group_flags_changed_cb(self, added, removed):
+        self._text_channel_group_flags |= added
+        self._text_channel_group_flags &= ~removed
 
     def _handle_share_join(self, tp, text_channel):
         """Called when a join to a network activity was successful.
@@ -679,14 +680,14 @@ class Activity(ExportedGObject):
                 changed = True
 
         if _PROP_TYPE in rprops.keys():
-            type = rprops[_PROP_TYPE]
-            if type != self._type:
+            type_ = rprops[_PROP_TYPE]
+            if type_ != self._type:
                 # Type can never be changed after first set
                 if self._type:
                     _logger.debug("Activity type changed by network; this "
                                   "is illegal")
                 else:
-                    self._type = type
+                    self._type = type_
                     changed = True
 
         # Set custom properties
