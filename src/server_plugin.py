@@ -495,9 +495,7 @@ class ServerPlugin(gobject.GObject):
             channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
                 reply_handler=lambda: self._join_activity_channel_props_set_cb(
                     activity_id, handle, channel, callback, err_cb),
-                error_handler=lambda e: self._join_error_cb(
-                    activity_id, callback, err_cb,
-                    'SetProperties(%r)' % props_to_set, e))
+                error_handler=err_cb)
         else:
             self._join_activity_channel_props_set_cb(activity_id,
                     handle, channel, callback, err_cb)
@@ -516,8 +514,7 @@ class ServerPlugin(gobject.GObject):
             reply_handler=lambda prop_specs: self._join_activity_channel_props_listed_cb(
                 activity_id, handle, channel, callback, err_cb, props,
                 prop_specs),
-            error_handler=lambda e: self._join_error_cb(
-                activity_id, callback, err_cb, 'ListProperties', e))
+            error_handler=err_cb)
 
     def _join_activity_get_channel_cb(self, activity_id, callback, err_cb,
                                       handles):
@@ -534,15 +531,7 @@ class ServerPlugin(gobject.GObject):
             HANDLE_TYPE_ROOM, handles[0], True,
             reply_handler=lambda *args: self._join_activity_create_channel_cb(
                 activity_id, handles[0], callback, err_cb, *args),
-            error_handler=lambda e: self._join_error_cb(activity_id,
-                callback, err_cb, 'RequestChannel(TEXT, ROOM, %r, True)' % handles[0],
-                e))
-
-    def _join_error_cb(self, activity_id, callback, err_cb, where, err):
-        e = Exception("Error joining/sharing activity %s: (%s): %s"
-                      % (activity_id, where, err))
-        _logger.debug('%s', e)
-        err_cb(e)
+            error_handler=err_cb)
 
     def join_activity(self, activity_id, callback, err_cb):
         """Share activity with the network, or join an activity on the
@@ -569,9 +558,7 @@ class ServerPlugin(gobject.GObject):
                     [room_jid],
                     reply_handler=lambda *args: self._join_activity_get_channel_cb(
                         activity_id, callback, err_cb, *args),
-                    error_handler=lambda e: self._join_error_cb(activity_id,
-                        callback, err_cb, 'RequestHandles([%u])' % room_jid,
-                        e))
+                    error_handler=err_cb)
         else:
             self._join_activity_get_channel_cb(activity_id, callback, err_cb,
                     [handle])
