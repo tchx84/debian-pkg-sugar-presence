@@ -21,7 +21,12 @@ import os.path
 import cPickle
 
 class BuddyIconCache(object):
-    """Caches icons on disk and finds them based on the jid of their owners."""
+    """Caches icons on disk and finds them based on the account they were
+    seen on, and the unique-ID of the owner on that protocol.
+    """
+
+    # FIXME: once we've seen a buddy, we never delete their buddy icon!
+
     def __init__(self):
         ppath = env.get_profile_path()
         self._cachepath = os.path.join(ppath, "cache", "buddy-icons", "cache")
@@ -32,7 +37,9 @@ class BuddyIconCache(object):
 
         if not os.path.exists(self._cachepath):
             self._cache = {}
-            # md5 and server token of the last avatar uploaded
+            # account object-path, md5 and server token of the last avatar
+            # uploaded
+            self._acct = '/'
             self._md5 = ''
             self._token = ''
         else:
@@ -40,16 +47,18 @@ class BuddyIconCache(object):
 
     def _load_cache(self):
         try:
-            self._cache, self._md5, self._token = cPickle.load(open(self._cachepath, "r"))
+            self._cache, self._acct, self._md5, self._token = \
+                    cPickle.load(open(self._cachepath, "r"))
         except:
-            self._cache, self._md5, self._token = {}, '', ''
+            self._cache, self._acct, self._md5, self._token = {}, '', '', ''
 
     def _save_cache(self):
         out = open(self._cachepath, "w")
-        cPickle.dump((self._cache, self._md5, self._token), out, protocol=2)
+        cPickle.dump((self._cache, self._acct, self._md5, self._token),
+                     out, protocol=2)
 
-    def get_icon(self, jid, token):
-        hit = self._cache.get(jid)
+    def get_icon(self, acct, uid, token):
+        hit = self._cache.get((acct, uid))
 
         if hit:
             t, icon = hit[0], hit[1]
@@ -58,36 +67,42 @@ class BuddyIconCache(object):
 
         return None
 
-    def store_icon(self, jid, token, data):
-        self._cache[jid] = (token, data)
+    def store_icon(self, acct, uid, token, data):
+        self._cache[(acct, uid)] = (token, data)
         self._save_cache()
 
-    def check_avatar(self, md5, token):
-        return self._md5 == md5 and self._token == token
+    def check_avatar(self, acct, md5sum, token):
+        return (self._acct == acct and self._md5 == md5sum and
+                self._token == token)
 
-    def set_avatar(self, md5, token):
-        self._md5 = md5
+    def set_avatar(self, acct, md5sum, token):
+        self._acct = acct
+        self._md5 = md5sum
         self._token = token
         self._save_cache()
 
 if __name__ == "__main__":
     my_cache = BuddyIconCache()
-    
+
+    TEST_ACCT = ('/org/freedesktop/Telepathy/ConnectionManager/gabble' +
+                 '/jabber/myself_40olpc_2ecollabora_2eco_2euk')
+    TEST_JID = 'test@olpc.collabora.co.uk'
+
     # look for the icon in the cache
-    icon = my_cache.get_icon("test@olpc.collabora.co.uk", "aaaa")
+    icon = my_cache.get_icon(TEST_ACCT, TEST_JID, "aaaa")
     print icon
 
-    my_cache.store_icon("test@olpc.collabora.co.uk", "aaaa", "icon1")
+    my_cache.store_icon(TEST_ACCT, TEST_JID, "aaaa", "icon1")
 
     # now we're sure that the icon is in the cache
-    icon = my_cache.get_icon("test@olpc.collabora.co.uk", "aaaa")
+    icon = my_cache.get_icon(TEST_ACCT, TEST_JID, "aaaa")
     print icon
 
     # new icon
-    my_cache.store_icon("test@olpc.collabora.co.uk", "bbbb", "icon2")
+    my_cache.store_icon(TEST_ACCT, TEST_JID, "bbbb", "icon2")
 
     # the icon in the cache is not valid now
-    icon = my_cache.get_icon("test@olpc.collabora.co.uk", "aaaa")
+    icon = my_cache.get_icon(TEST_ACCT, TEST_JID, "aaaa")
     print icon
 
 

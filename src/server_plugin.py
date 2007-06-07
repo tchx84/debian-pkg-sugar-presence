@@ -444,7 +444,7 @@ class ServerPlugin(gobject.GObject):
         return True
 
     def _set_self_avatar_cb(self, token):
-        self._icon_cache.set_avatar(hash, token)
+        self._icon_cache.set_avatar(self._conn.object_path, hash, token)
 
     def _set_self_avatar(self, icon_data=None):
         if not icon_data:
@@ -458,7 +458,7 @@ class ServerPlugin(gobject.GObject):
         token = self._conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
                 [self_handle])[0]
 
-        if self._icon_cache.check_avatar(hash, token):
+        if self._icon_cache.check_avatar(self._conn.object_path, hash, token):
             # avatar is up to date
             return
 
@@ -925,7 +925,8 @@ class ServerPlugin(gobject.GObject):
             logging.debug("Handle %s not valid yet..." % handle)
             return
         icon = ''.join(map(chr, avatar))
-        self._icon_cache.store_icon(jid, new_avatar_token, icon)
+        self._icon_cache.store_icon(self._conn.object_path, jid,
+                                    new_avatar_token, icon)
         self.emit("avatar-updated", handle, icon)
 
     def _avatar_updated_cb(self, handle, new_avatar_token):
@@ -944,7 +945,8 @@ class ServerPlugin(gobject.GObject):
             _logger.debug("Handle %s not valid yet...", handle)
             return
 
-        icon = self._icon_cache.get_icon(jid, new_avatar_token)
+        icon = self._icon_cache.get_icon(self._conn.object_path, jid,
+                                         new_avatar_token)
         if not icon:
             # cache miss
             self._conn[CONN_INTERFACE_AVATARS].RequestAvatar(handle,
