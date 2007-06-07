@@ -320,7 +320,7 @@ class Activity(ExportedGObject):
                         unsuccessful
 
         """
-        self.join(lambda unused: async_cb(), async_err_cb)
+        self.join(lambda unused: async_cb(), async_err_cb, False)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="ao")
@@ -496,22 +496,6 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _share(self, async_cb, async_err_cb):
-        """XXX - not documented yet
-
-        XXX - This method is called externally by the PresenceService
-        despite the fact that this is supposed to be an internal method!
-        """
-        _logger.debug("Starting share of activity %s" % self._id)
-        if self._joined:
-            async_err_cb(RuntimeError("Already shared activity %s"
-                                      % self.props.id))
-            return
-        sigid = self._tp.connect('activity-shared', self._joined_cb)
-        self._tp.share_activity(self.props.id, (sigid, async_cb,
-                                                async_err_cb, True))
-        _logger.debug("done with share attempt %s" % self._id)
-
     def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc,
                    userdata):
         """XXX - not documented yet
@@ -538,7 +522,7 @@ class Activity(ExportedGObject):
             async_cb(dbus.ObjectPath(self._object_path))
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
 
-    def join(self, async_cb, async_err_cb):
+    def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
 
         async_cb -- Callback method to be called if join attempt is successful
@@ -549,13 +533,15 @@ class Activity(ExportedGObject):
         which in turn passes them back as parameters in a callback to the
         _joined_cb method; this callback is set up within this method.
         """
+        _logger.debug("Starting share/join of activity %s", self._id)
         if self._joined:
             async_err_cb(RuntimeError("Already joined activity %s"
                                       % self.props.id))
             return
         sigid = self._tp.connect('activity-joined', self._joined_cb)
         self._tp.join_activity(self.props.id, (sigid, async_cb, async_err_cb,
-                                               False))
+                                               sharing))
+        _logger.debug("triggered share/join attempt on activity %s", self._id)
 
     def get_channels(self):
         """Local method to get the list of channels associated with this

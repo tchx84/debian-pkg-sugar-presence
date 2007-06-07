@@ -481,7 +481,7 @@ class PresenceService(ExportedGObject):
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         self._activities[actid] = activity
-        activity._share(async_cb, async_err_cb)
+        activity.join(async_cb, async_err_cb, True)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already

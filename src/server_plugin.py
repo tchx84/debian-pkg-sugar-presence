@@ -157,19 +157,14 @@ class ServerPlugin(gobject.GObject):
             #   properties: dict { str => object }
             # FIXME: are these all the properties or just those that changed?
             (gobject.SIGNAL_RUN_FIRST, None, [object, object, object]),
-        'activity-shared':
-            # share_activity() succeeded
+        'activity-joined':
+            # join_activity() succeeded
             # args:
             #   activity ID: str
             #   activity room handle: int or long
             #   channel: telepathy.client.Channel, or None on failure
             #   error: None, or Exception on failure
-            #   userdata as passed to share_activity
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object,
-                                              object]),
-        'activity-joined':
-            # join_activity() succeeded
-            # args: as for activity-shared
+            #   userdata as passed to join_activity
             (gobject.SIGNAL_RUN_FIRST, None, [object, object, object, object,
                                               object]),
     }
@@ -571,21 +566,9 @@ class ServerPlugin(gobject.GObject):
             self._join_activity_get_channel_cb(activity_id, signal, userdata,
                     [handle])
 
-    def share_activity(self, activity_id, userdata):
-        """Share activity with the network
-
-        activity_id -- unique ID for the activity
-        userdata -- opaque token to be passed in the resulting event
-            (id, callback, errback) normally
-
-        Asks the Telepathy server to create a "conference" channel
-        for the activity or return a handle to an already created
-        conference channel for the activity.
-        """
-        self._internal_join_activity(activity_id, "activity-shared", userdata)
-
     def join_activity(self, activity_id, userdata):
-        """Join an activity on the network (or locally)
+        """Share activity with the network, or join an activity on the
+        network (or locally)
 
         activity_id -- unique ID for the activity
         userdata -- opaque token to be passed in the resulting event
