@@ -496,7 +496,7 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _share(self, async_cb, async_err_cb, owner):
+    def _share(self, async_cb, async_err_cb):
         """XXX - not documented yet
 
         XXX - This method is called externally by the PresenceService
@@ -510,7 +510,6 @@ class Activity(ExportedGObject):
         sigid = self._tp.connect('activity-shared', self._joined_cb)
         self._tp.share_activity(self.props.id, (sigid, async_cb,
                                                 async_err_cb, True))
-        self._owner = owner
         _logger.debug("done with share attempt %s" % self._id)
 
     def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc,
@@ -535,8 +534,7 @@ class Activity(ExportedGObject):
             self._handle_share_join(tp, text_channel)
             if am_sharing:
                 self.send_properties()
-                assert self._owner is not None
-                self._owner.add_activity(self)
+                self._ps.owner.add_activity(self)
             async_cb(dbus.ObjectPath(self._object_path))
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
 

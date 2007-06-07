@@ -133,6 +133,10 @@ class PresenceService(ExportedGObject):
         self._bus_name = dbus.service.BusName(_PRESENCE_SERVICE,
                                               bus=self._session_bus)
 
+    @property
+    def owner(self):
+        return self._owner
+
     def _connection_disconnected_cb(self, foo=None):
         """Log event when D-Bus kicks us off the bus for some reason"""
         _logger.debug("Disconnected from session bus!!!")
@@ -477,7 +481,7 @@ class PresenceService(ExportedGObject):
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         self._activities[actid] = activity
-        activity._share(async_cb, async_err_cb, self._owner)
+        activity._share(async_cb, async_err_cb)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already
