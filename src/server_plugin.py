@@ -472,21 +472,6 @@ class ServerPlugin(gobject.GObject):
         self._joined_activities.append((activity_id, room))
         self._set_self_activities()
 
-    def _join_activity_create_channel_cb(self, activity_id, handle,
-                                         callback, err_cb, chan_path):
-        channel = Channel(self._conn.service_name, chan_path)
-        props = {
-            'anonymous': False,         # otherwise buddy resolution breaks
-            'invite-only': False,       # XXX: should be True in future
-            #'name': ...                # XXX: set from activity name?
-            'persistent': False,        # vanish when there are no members
-            'private': False,           # XXX: should be True unless public
-        }
-        channel[PROPERTIES_INTERFACE].ListProperties(
-            reply_handler=lambda prop_specs: callback(self,
-                activity_id, handle, channel, props, prop_specs),
-            error_handler=err_cb)
-
     def _join_activity_get_channel_cb(self, activity_id, callback, err_cb,
                                       handles):
         if not self._activities.has_key(activity_id):
@@ -500,8 +485,8 @@ class ServerPlugin(gobject.GObject):
 
         self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
             HANDLE_TYPE_ROOM, handles[0], True,
-            reply_handler=lambda *args: self._join_activity_create_channel_cb(
-                activity_id, handles[0], callback, err_cb, *args),
+            reply_handler=lambda path: callback(self, activity_id,
+                handles[0], path),
             error_handler=err_cb)
 
     def join_activity(self, activity_id, callback, err_cb):
@@ -514,9 +499,7 @@ class ServerPlugin(gobject.GObject):
                 self
                 activity ID: str
                 activity room handle: int or long
-                channel: telepathy.client.Channel, or None on failure
-                props: properties we want to set on the channel
-                prop_specs: property specifications
+                channel: object path
         err_cb -- callback to be called on failure, with one Exception argument
 
         Asks the Telepathy server to create a "conference" channel

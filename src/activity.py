@@ -22,6 +22,7 @@ from dbus.gobject_service import ExportedGObject
 from sugar import util
 import logging
 
+from telepathy.client import Channel
 from telepathy.constants import (CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
                                  PROPERTY_FLAG_WRITE)
 from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
@@ -556,6 +557,22 @@ class Activity(ExportedGObject):
         else:
             self._joined_cb(tp, activity_id, handle, channel)
 
+    def _join_activity_create_channel_cb(self, tp, activity_id, handle,
+                                         chan_path):
+        channel = Channel(tp.get_connection().service_name, chan_path)
+        props = {
+            'anonymous': False,         # otherwise buddy resolution breaks
+            'invite-only': False,       # XXX: should be True in future
+            #'name': ...                # XXX: set from activity name?
+            'persistent': False,        # vanish when there are no members
+            'private': False,           # XXX: should be True unless public
+        }
+        channel[PROPERTIES_INTERFACE].ListProperties(
+            reply_handler=lambda prop_specs:
+                self._join_activity_channel_props_listed_cb(tp,
+                    activity_id, handle, channel, props, prop_specs),
+            error_handler=self._join_failed_cb)
+
     def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
 
@@ -584,7 +601,7 @@ class Activity(ExportedGObject):
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
 
-        self._tp.join_activity(self.props.id, self._join_activity_channel_props_listed_cb,
+        self._tp.join_activity(self.props.id, self._join_activity_create_channel_cb,
                                self._join_failed_cb)
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
