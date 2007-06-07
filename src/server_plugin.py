@@ -1065,7 +1065,7 @@ class ServerPlugin(gobject.GObject):
         """Handle update of properties for a "room" (activity handle)"""
         for act_id, act_handle in self._activities.items():
             if room == act_handle:
-                self.emit("activity-properties-changed", act_id, properties)
+                self.emit("activity-properties-changed", act_id, room, properties)
                 return
 
     def _server_is_trusted(self, hostname):
