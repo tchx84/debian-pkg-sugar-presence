@@ -500,7 +500,7 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc):
+    def _joined_cb(self, tp, activity_id, room_handle, text_channel):
         """XXX - not documented yet
         """
         assert activity_id == self.props.id
@@ -508,17 +508,24 @@ class Activity(ExportedGObject):
         self._room = room_handle
 
         verb = self._join_is_sharing and 'Share' or 'Join'
-        if exc:
-            _logger.debug("%s of activity %s failed: %s" % (verb, self._id,
-                          exc))
-            self._join_err_cb(exc)
-        else:
+
+        try:
             self._handle_share_join(tp, text_channel)
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
             self._join_cb(dbus.ObjectPath(self._object_path))
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
+        except Exception, e:
+            self._join_failed_cb(e)
+
+        self._join_cb = None
+        self._join_err_cb = None
+
+    def _join_failed_cb(self, e):
+        verb = self._join_is_sharing and 'Share' or 'Join'
+        _logger.debug("%s of activity %s failed: %s" % (verb, self._id, e))
+        self._join_err_cb(e)
 
         self._join_cb = None
         self._join_err_cb = None
@@ -551,7 +558,8 @@ class Activity(ExportedGObject):
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
 
-        self._tp.join_activity(self.props.id, self._joined_cb)
+        self._tp.join_activity(self.props.id, self._joined_cb,
+                               self._join_failed_cb)
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
     def get_channels(self):

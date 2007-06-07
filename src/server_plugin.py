@@ -473,13 +473,13 @@ class ServerPlugin(gobject.GObject):
         self._set_self_activities()
 
     def _join_activity_channel_props_set_cb(self, activity_id, handle,
-                                            channel, callback):
+                                            channel, callback, err_cb):
         self.emit_joined_activity(activity_id, handle)
-        callback(self, activity_id, handle, channel, None)
+        callback(self, activity_id, handle, channel)
 
     def _join_activity_channel_props_listed_cb(self, activity_id,
                                                handle, channel, callback,
-                                               props, prop_specs):
+                                               err_cb, props, prop_specs):
 
         props_to_set = []
         for ident, name, sig, flags in prop_specs:
@@ -494,16 +494,16 @@ class ServerPlugin(gobject.GObject):
         if props_to_set:
             channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
                 reply_handler=lambda: self._join_activity_channel_props_set_cb(
-                    activity_id, handle, channel, callback),
+                    activity_id, handle, channel, callback, err_cb),
                 error_handler=lambda e: self._join_error_cb(
-                    activity_id, callback,
+                    activity_id, callback, err_cb,
                     'SetProperties(%r)' % props_to_set, e))
         else:
             self._join_activity_channel_props_set_cb(activity_id,
-                    handle, channel, callback)
+                    handle, channel, callback, err_cb)
 
     def _join_activity_create_channel_cb(self, activity_id, handle,
-                                         callback, chan_path):
+                                         callback, err_cb, chan_path):
         channel = Channel(self._conn.service_name, chan_path)
         props = {
             'anonymous': False,         # otherwise buddy resolution breaks
@@ -514,11 +514,12 @@ class ServerPlugin(gobject.GObject):
         }
         channel[PROPERTIES_INTERFACE].ListProperties(
             reply_handler=lambda prop_specs: self._join_activity_channel_props_listed_cb(
-                activity_id, handle, channel, callback, props, prop_specs),
+                activity_id, handle, channel, callback, err_cb, props,
+                prop_specs),
             error_handler=lambda e: self._join_error_cb(
-                activity_id, callback, 'ListProperties', e))
+                activity_id, callback, err_cb, 'ListProperties', e))
 
-    def _join_activity_get_channel_cb(self, activity_id, callback,
+    def _join_activity_get_channel_cb(self, activity_id, callback, err_cb,
                                       handles):
         if not self._activities.has_key(activity_id):
             self._activities[activity_id] = handles[0]
@@ -526,24 +527,24 @@ class ServerPlugin(gobject.GObject):
         if (activity_id, handles[0]) in self._joined_activities:
             e = RuntimeError("Already joined activity %s" % activity_id)
             _logger.debug('%s', e)
-            callback(self, activity_id, handles[0], None, e)
+            err_cb(e)
             return
 
         self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
             HANDLE_TYPE_ROOM, handles[0], True,
             reply_handler=lambda *args: self._join_activity_create_channel_cb(
-                activity_id, handles[0], callback, *args),
+                activity_id, handles[0], callback, err_cb, *args),
             error_handler=lambda e: self._join_error_cb(activity_id,
-                callback, 'RequestChannel(TEXT, ROOM, %r, True)' % handles[0],
+                callback, err_cb, 'RequestChannel(TEXT, ROOM, %r, True)' % handles[0],
                 e))
 
-    def _join_error_cb(self, activity_id, callback, where, err):
+    def _join_error_cb(self, activity_id, callback, err_cb, where, err):
         e = Exception("Error joining/sharing activity %s: (%s): %s"
                       % (activity_id, where, err))
         _logger.debug('%s', e)
-        callback(self, activity_id, 0, None, e)
+        err_cb(e)
 
-    def join_activity(self, activity_id, callback):
+    def join_activity(self, activity_id, callback, err_cb):
         """Share activity with the network, or join an activity on the
         network (or locally)
 
@@ -554,7 +555,7 @@ class ServerPlugin(gobject.GObject):
                 activity ID: str
                 activity room handle: int or long
                 channel: telepathy.client.Channel, or None on failure
-                error: None, or Exception on failure
+        err_cb -- callback to be called on failure, with one Exception argument
 
         Asks the Telepathy server to create a "conference" channel
         for the activity or return a handle to an already created
@@ -567,12 +568,12 @@ class ServerPlugin(gobject.GObject):
             self._conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
                     [room_jid],
                     reply_handler=lambda *args: self._join_activity_get_channel_cb(
-                        activity_id, callback, *args),
+                        activity_id, callback, err_cb, *args),
                     error_handler=lambda e: self._join_error_cb(activity_id,
-                        callback, 'RequestHandles([%u])' % room_jid,
+                        callback, err_cb, 'RequestHandles([%u])' % room_jid,
                         e))
         else:
-            self._join_activity_get_channel_cb(activity_id, callback,
+            self._join_activity_get_channel_cb(activity_id, callback, err_cb,
                     [handle])
 
     def _ignore_success_cb(self):
