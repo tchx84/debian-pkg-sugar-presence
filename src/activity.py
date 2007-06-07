@@ -22,8 +22,10 @@ from dbus.gobject_service import ExportedGObject
 from sugar import util
 import logging
 
-from telepathy.constants import CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES
-from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP)
+from telepathy.constants import (CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
+                                 PROPERTY_FLAG_WRITE)
+from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
+                                  PROPERTIES_INTERFACE)
 
 _ACTIVITY_PATH = "/org/laptop/Sugar/Presence/Activities/"
 _ACTIVITY_INTERFACE = "org.laptop.Sugar.Presence.Activity"
@@ -532,6 +534,28 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
 
+    def _join_activity_channel_props_listed_cb(self, tp, activity_id,
+                                               handle, channel, props,
+                                               prop_specs):
+
+        props_to_set = []
+        for ident, name, sig, flags in prop_specs:
+            value = props.pop(name, None)
+            if value is not None:
+                if flags & PROPERTY_FLAG_WRITE:
+                    props_to_set.append((ident, value))
+                # FIXME: else error, but only if we're creating the room?
+        # FIXME: if props is nonempty, then we want to set props that aren't
+        # supported here - raise an error?
+
+        if props_to_set:
+            channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
+                reply_handler=lambda: self._joined_cb(tp, activity_id, handle,
+                    channel),
+                error_handler=self._join_failed_cb)
+        else:
+            self._joined_cb(tp, activity_id, handle, channel)
+
     def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
 
@@ -560,7 +584,7 @@ class Activity(ExportedGObject):
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
 
-        self._tp.join_activity(self.props.id, self._joined_cb,
+        self._tp.join_activity(self.props.id, self._join_activity_channel_props_listed_cb,
                                self._join_failed_cb)
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 

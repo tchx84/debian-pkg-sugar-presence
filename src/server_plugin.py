@@ -472,28 +472,6 @@ class ServerPlugin(gobject.GObject):
         self._joined_activities.append((activity_id, room))
         self._set_self_activities()
 
-    def _join_activity_channel_props_listed_cb(self, activity_id,
-                                               handle, channel, callback,
-                                               err_cb, props, prop_specs):
-
-        props_to_set = []
-        for ident, name, sig, flags in prop_specs:
-            value = props.pop(name, None)
-            if value is not None:
-                if flags & PROPERTY_FLAG_WRITE:
-                    props_to_set.append((ident, value))
-                # FIXME: else error, but only if we're creating the room?
-        # FIXME: if props is nonempty, then we want to set props that aren't
-        # supported here - raise an error?
-
-        if props_to_set:
-            channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
-                reply_handler=lambda: callback(self, activity_id, handle,
-                    channel)
-                error_handler=err_cb)
-        else:
-            callback(self, activity_id, handle, channel)
-
     def _join_activity_create_channel_cb(self, activity_id, handle,
                                          callback, err_cb, chan_path):
         channel = Channel(self._conn.service_name, chan_path)
@@ -505,9 +483,8 @@ class ServerPlugin(gobject.GObject):
             'private': False,           # XXX: should be True unless public
         }
         channel[PROPERTIES_INTERFACE].ListProperties(
-            reply_handler=lambda prop_specs: self._join_activity_channel_props_listed_cb(
-                activity_id, handle, channel, callback, err_cb, props,
-                prop_specs),
+            reply_handler=lambda prop_specs: callback(self,
+                activity_id, handle, channel, props, prop_specs),
             error_handler=err_cb)
 
     def _join_activity_get_channel_cb(self, activity_id, callback, err_cb,
@@ -538,6 +515,8 @@ class ServerPlugin(gobject.GObject):
                 activity ID: str
                 activity room handle: int or long
                 channel: telepathy.client.Channel, or None on failure
+                props: properties we want to set on the channel
+                prop_specs: property specifications
         err_cb -- callback to be called on failure, with one Exception argument
 
         Asks the Telepathy server to create a "conference" channel
