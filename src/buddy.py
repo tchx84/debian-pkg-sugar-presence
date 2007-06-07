@@ -28,7 +28,6 @@ import logging
 
 _BUDDY_PATH = "/org/laptop/Sugar/Presence/Buddies/"
 _BUDDY_INTERFACE = "org.laptop.Sugar.Presence.Buddy"
-_OWNER_INTERFACE = "org.laptop.Sugar.Presence.Buddy.Owner"
 
 _PROP_NICK = "nick"
 _PROP_KEY = "key"
@@ -289,10 +288,10 @@ class Buddy(ExportedGObject):
     def GetIcon(self):
         """Retrieve Buddy's icon data
 
-        returns empty string or dbus.ByteArray
+        returns dbus.ByteArray
         """
         if not self.props.icon:
-            return ""
+            return dbus.ByteArray('')
         return dbus.ByteArray(self.props.icon)
 
     @dbus.service.method(_BUDDY_INTERFACE,
