@@ -80,7 +80,6 @@ def _get_buddy_icon_at_size(icon, maxw, maxh, maxsize):
     quality = 90
     img_size = maxsize + 1
     while img_size > maxsize:
-        del data
         data = [""]
         pixbuf.save_to_callback(_buddy_icon_save_cb, "jpeg",
                                 {"quality":"%d" % quality}, data)
@@ -89,7 +88,7 @@ def _get_buddy_icon_at_size(icon, maxw, maxh, maxsize):
     del pixbuf
 
     if img_size > maxsize:
-        del data
+        data = [""]
         raise RuntimeError("could not size image less than %d bytes" % maxsize)
 
     return str(data[0])
@@ -292,7 +291,6 @@ class ServerPlugin(gobject.GObject):
 
         # Search existing connections, if any, that we might be able to use
         connections = Connection.get_connections()
-        conn = None
         for item in connections:
             if not item.object_path.startswith(_OBJ_PATH_PREFIX):
                 continue
@@ -443,24 +441,25 @@ class ServerPlugin(gobject.GObject):
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
         return True
 
-    def _set_self_avatar_cb(self, token):
-        self._icon_cache.set_avatar(self._conn.object_path, hash, token)
-
     def _set_self_avatar(self, icon_data=None):
         if not icon_data:
             icon_data = self._owner.props.icon
 
         m = md5()
         m.update(icon_data)
-        hash = m.hexdigest()
+        digest = m.hexdigest()
 
         self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
         token = self._conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
                 [self_handle])[0]
 
-        if self._icon_cache.check_avatar(self._conn.object_path, hash, token):
+        if self._icon_cache.check_avatar(self._conn.object_path, digest,
+                                         token):
             # avatar is up to date
             return
+
+        def set_self_avatar_cb(token):
+            self._icon_cache.set_avatar(self._conn.object_path, digest, token)
 
         types, minw, minh, maxw, maxh, maxsize = \
                 self._conn[CONN_INTERFACE_AVATARS].GetAvatarRequirements()
@@ -471,7 +470,7 @@ class ServerPlugin(gobject.GObject):
         img_data = _get_buddy_icon_at_size(icon_data, min(maxw, 96),
                                            min(maxh, 96), maxsize)
         self._conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
-                reply_handler=self._set_self_avatar_cb,
+                reply_handler=set_self_avatar_cb,
                 error_handler=lambda e: self._log_error_cb("setting avatar", e))
 
     def _join_activity_channel_props_set_cb(self, activity_id, signal, handle,

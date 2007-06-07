@@ -21,6 +21,7 @@ from weakref import WeakValueDictionary
 import dbus
 import dbus.service
 import gobject
+from dbus.exceptions import DBusException
 from dbus.gobject_service import ExportedGObject
 from dbus.mainloop.glib import DBusGMainLoop
 from telepathy.client import ManagerRegistry, Connection
@@ -45,9 +46,9 @@ _PRESENCE_PATH = "/org/laptop/Sugar/Presence"
 _logger = logging.getLogger('s-p-s.presenceservice')
 
 
-class NotFoundError(dbus.DBusException):
+class NotFoundError(DBusException):
     def __init__(self, msg):
-        dbus.DBusException.__init__(self, msg)
+        DBusException.__init__(self, msg)
         self._dbus_error_name = _PRESENCE_INTERFACE + '.NotFound'
 
 class PresenceService(ExportedGObject):
@@ -499,7 +500,7 @@ class PresenceService(ExportedGObject):
 
 def main(test_num=0, randomize=False):
     loop = gobject.MainLoop()
-    dbus_mainloop_wrapper = DBusGMainLoop(set_as_default=True)
+    DBusGMainLoop(set_as_default=True)
 
     if test_num > 0:
         from pstest import TestPresenceService
