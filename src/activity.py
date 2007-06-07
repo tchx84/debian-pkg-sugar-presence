@@ -505,6 +505,8 @@ class Activity(ExportedGObject):
         """
         assert activity_id == self.props.id
 
+        tp.emit_joined_activity(activity_id, room_handle)
+
         self._room = room_handle
 
         verb = self._join_is_sharing and 'Share' or 'Join'

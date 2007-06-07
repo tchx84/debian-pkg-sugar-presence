@@ -472,11 +472,6 @@ class ServerPlugin(gobject.GObject):
         self._joined_activities.append((activity_id, room))
         self._set_self_activities()
 
-    def _join_activity_channel_props_set_cb(self, activity_id, handle,
-                                            channel, callback, err_cb):
-        self.emit_joined_activity(activity_id, handle)
-        callback(self, activity_id, handle, channel)
-
     def _join_activity_channel_props_listed_cb(self, activity_id,
                                                handle, channel, callback,
                                                err_cb, props, prop_specs):
@@ -493,12 +488,11 @@ class ServerPlugin(gobject.GObject):
 
         if props_to_set:
             channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
-                reply_handler=lambda: self._join_activity_channel_props_set_cb(
-                    activity_id, handle, channel, callback, err_cb),
+                reply_handler=lambda: callback(self, activity_id, handle,
+                    channel)
                 error_handler=err_cb)
         else:
-            self._join_activity_channel_props_set_cb(activity_id,
-                    handle, channel, callback, err_cb)
+            callback(self, activity_id, handle, channel)
 
     def _join_activity_create_channel_cb(self, activity_id, handle,
                                          callback, err_cb, chan_path):
