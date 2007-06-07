@@ -170,7 +170,16 @@ class Activity(ExportedGObject):
 
         # If not yet valid, query activity properties
         if not self._valid:
-            tp.update_activity_properties(self._id)
+            assert self._room, self._room
+            conn = self._tp.get_connection()
+
+            def got_properties_err(e):
+                _logger.warning('Failed to get initial activity properties '
+                                'for %s: %s', self._id, e)
+
+            conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].GetProperties(self._room,
+                    reply_handler=self.set_properties,
+                    error_handler=got_properties_err)
 
     def do_get_property(self, pspec):
         """Gets the value of a property associated with this activity.

@@ -973,18 +973,6 @@ class ServerPlugin(gobject.GObject):
                                CHANNEL_TYPE_STREAMED_MEDIA)):
             self.emit("private-invitation", object_path)
 
-    def update_activity_properties(self, act_id):
-        """Request update from network on the activity properties of act_id"""
-        handle = self._activities.get(act_id)
-        if not handle:
-            raise RuntimeError("Unknown activity %s: couldn't find handle.")
-
-        self._conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].GetProperties(handle,
-                reply_handler=lambda *args: self._activity_properties_changed_cb(
-                    handle, *args),
-                error_handler=lambda e: self._log_error_cb(
-                    "getting activity properties", e))
-
     def set_activity_properties(self, act_id, props):
         """Send update to network on the activity properties of act_id (props).
         """
