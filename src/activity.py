@@ -127,6 +127,10 @@ class Activity(ExportedGObject):
         self._member_handles = set()
         self._joined = False
 
+        self._join_cb = None
+        self._join_err_cb = None
+        self._join_is_sharing = False
+
         # the telepathy client
         self._tp = tp
         self._room = room
@@ -496,31 +500,30 @@ class Activity(ExportedGObject):
 
         return True
 
-    def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc,
-                   userdata):
+    def _joined_cb(self, tp, activity_id, room_handle, text_channel, exc):
         """XXX - not documented yet
         """
         if activity_id != self.props.id:
             # Not for us
             return
 
-        (sigid, async_cb, async_err_cb, am_sharing) = userdata
-        self._tp.disconnect(sigid)
-
         self._room = room_handle
 
-        verb = am_sharing and 'Share' or 'Join'
+        verb = self._join_is_sharing and 'Share' or 'Join'
         if exc:
             _logger.debug("%s of activity %s failed: %s" % (verb, self._id,
                           exc))
-            async_err_cb(exc)
+            self._join_err_cb(exc)
         else:
             self._handle_share_join(tp, text_channel)
-            if am_sharing:
+            if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
-            async_cb(dbus.ObjectPath(self._object_path))
+            self._join_cb(dbus.ObjectPath(self._object_path))
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
+
+        self._join_cb = None
+        self._join_err_cb = None
 
     def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
@@ -534,13 +537,23 @@ class Activity(ExportedGObject):
         _joined_cb method; this callback is set up within this method.
         """
         _logger.debug("Starting share/join of activity %s", self._id)
+
         if self._joined:
             async_err_cb(RuntimeError("Already joined activity %s"
                                       % self.props.id))
             return
-        sigid = self._tp.connect('activity-joined', self._joined_cb)
-        self._tp.join_activity(self.props.id, (sigid, async_cb, async_err_cb,
-                                               sharing))
+
+        if self._join_cb is not None:
+            # FIXME: or should we trigger all the attempts?
+            async_err_cb(RuntimeError('Already trying to join activity %s'
+                                      % self.props.id))
+            return
+
+        self._join_cb = async_cb
+        self._join_err_cb = async_err_cb
+        self._join_is_sharing = sharing
+
+        self._tp.join_activity(self.props.id, self._joined_cb)
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
     def get_channels(self):
