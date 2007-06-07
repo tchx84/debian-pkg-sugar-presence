@@ -750,8 +750,8 @@ class ServerPlugin(gobject.GObject):
         for handle in self._online_contacts.keys():
             self._contact_offline(handle)
         self._online_contacts = {}
-        self._joined_activites = []
-        self._activites = {}
+        self._joined_activities = []
+        self._activities = {}
 
         if self._reconnect_id > 0:
             gobject.source_remove(self._reconnect_id)
