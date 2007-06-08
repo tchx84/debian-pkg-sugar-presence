@@ -472,49 +472,11 @@ class ServerPlugin(gobject.GObject):
         self._joined_activities.append((activity_id, room))
         self._set_self_activities()
 
-    def _join_activity_get_channel_cb(self, activity_id, callback, err_cb,
-                                      handles):
-        if not self._activities.has_key(activity_id):
-            self._activities[activity_id] = handles[0]
-
-        if (activity_id, handles[0]) in self._joined_activities:
-            e = RuntimeError("Already joined activity %s" % activity_id)
-            _logger.debug('%s', e)
-            err_cb(e)
-            return
-
-        self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
-            HANDLE_TYPE_ROOM, handles[0], True,
-            reply_handler=lambda path: callback(handles[0], path),
-            error_handler=err_cb)
-
-    def join_activity(self, activity_id, callback, err_cb):
-        """Share activity with the network, or join an activity on the
-        network (or locally)
-
-        activity_id -- unique ID for the activity
-        callback -- callback to be called when the join succeeds or fails,
-            with arguments:
-                activity room handle: int or long
-                channel: object path
-        err_cb -- callback to be called on failure, with one Exception argument
-
-        Asks the Telepathy server to create a "conference" channel
-        for the activity or return a handle to an already created
-        conference channel for the activity.
+    def suggest_room_for_activity(self, activity_id):
+        """Suggest a room to use to share the given activity.
         """
-        handle = self._activities.get(activity_id)
-        if not handle:
-            # FIXME: figure out why the server can't figure this out itself
-            room_jid = activity_id + "@conference." + self._account["server"]
-            self._conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
-                    [room_jid],
-                    reply_handler=lambda *args: self._join_activity_get_channel_cb(
-                        activity_id, callback, err_cb, *args),
-                    error_handler=err_cb)
-        else:
-            self._join_activity_get_channel_cb(activity_id, callback, err_cb,
-                    [handle])
+        # FIXME: figure out why the server can't figure this out itself
+        return activity_id + '@conference.' + self._account['server']
 
     def _ignore_success_cb(self):
         """Ignore an event (null-operation)"""

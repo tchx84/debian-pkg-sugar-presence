@@ -24,8 +24,9 @@ import logging
 
 from telepathy.client import Channel
 from telepathy.constants import (CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
-                                 PROPERTY_FLAG_WRITE)
+                                 PROPERTY_FLAG_WRITE, HANDLE_TYPE_ROOM)
 from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
+                                  CHANNEL_TYPE_TEXT, CONN_INTERFACE,
                                   PROPERTIES_INTERFACE)
 
 
@@ -569,14 +570,23 @@ class Activity(ExportedGObject):
         else:
             self._joined_cb(channel)
 
-    def _join_activity_create_channel_cb(self, handle, chan_path):
-        self._room = handle
-
+    def _join_activity_create_channel_cb(self, chan_path):
         channel = Channel(self._tp.get_connection().service_name, chan_path)
         channel[PROPERTIES_INTERFACE].ListProperties(
             reply_handler=lambda prop_specs:
                 self._join_activity_channel_props_listed_cb(
                     channel, prop_specs),
+            error_handler=self._join_failed_cb)
+
+    def _join_activity_got_handles_cb(self, handles):
+        assert len(handles) == 1
+
+        self._room = handles[0]
+
+        conn = self._tp.get_connection()
+        conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
+            HANDLE_TYPE_ROOM, self._room, True,
+            reply_handler=self._join_activity_create_channel_cb,
             error_handler=self._join_failed_cb)
 
     def join(self, async_cb, async_err_cb, sharing):
@@ -607,8 +617,18 @@ class Activity(ExportedGObject):
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
 
-        self._tp.join_activity(self._id, self._join_activity_create_channel_cb,
-                               self._join_failed_cb)
+        if self._room:
+            # we're probably sharing a local activity.
+            # FIXME: assert that this is the case?
+            self._join_activity_got_handles_cb((self._room,))
+        else:
+            conn = self._tp.get_connection()
+
+            conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
+                [self._tp.suggest_room_for_activity(self._id)],
+                reply_handler=self._join_activity_got_handles_cb,
+                error_handler=self._join_failed_cb)
+
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
     def get_channels(self):
