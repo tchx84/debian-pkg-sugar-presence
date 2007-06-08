@@ -548,25 +548,27 @@ class ServerPlugin(gobject.GObject):
                           handle, err)
             self._contact_offline(handle)
 
-    def _contact_online(self, handle):
-        """Handle a contact coming online"""
-        if (handle not in self._subscribe_members and
-                handle not in self._subscribe_local_pending and
-                handle not in self._subscribe_remote_pending):
-            # it's probably a channel-specific handle - can't create a Buddy
-            # object for those yet
-            return
+    def _contacts_online(self, handles):
+        """Handle contacts coming online"""
+        relevant = []
 
-        self._online_contacts[handle] = None
-        if handle == self._conn[CONN_INTERFACE].GetSelfHandle():
-            jid = self._conn[CONN_INTERFACE].InspectHandles(
-                    HANDLE_TYPE_CONTACT, [handle])[0]
-            self._online_contacts[handle] = jid
-            # ignore network events for Owner property changes since those
-            # are handled locally
-            return
+        for handle in handles:
+            if handle == self.self_handle:
+                jid = self._conn[CONN_INTERFACE].InspectHandles(
+                        HANDLE_TYPE_CONTACT, [handle])[0]
+                self._online_contacts[handle] = jid
+                # ignore network events for Owner property changes since those
+                # are handled locally
+            elif (handle in self._subscribe_members or
+                  handle in self._subscribe_local_pending or
+                  handle in self._subscribe_remote_pending):
+                relevant.append(handle)
+            # else it's probably a channel-specific handle - can't create a
+            # Buddy object for those yet
 
-        self._contact_online_request_properties(handle, 1)
+        for handle in relevant:
+            self._online_contacts[handle] = None
+            self._contact_online_request_properties(handle, 1)
 
     def _subscribe_members_changed_cb(self, message, added, removed,
                                       local_pending, remote_pending,
@@ -605,6 +607,10 @@ class ServerPlugin(gobject.GObject):
 
     def _presence_update_cb(self, presence):
         """Send update for online/offline status of presence"""
+
+        now_online = []
+        now_offline = []
+
         for handle in presence:
             timestamp, statuses = presence[handle]
             online = handle in self._online_contacts
@@ -620,9 +626,13 @@ class ServerPlugin(gobject.GObject):
                               handle, jid, olstr, status)
                 if not online and status in ["available", "away", "brb",
                                              "busy", "dnd", "xa"]:
-                    self._contact_online(handle)
+                    now_online.append(handle)
                 elif status in ["offline", "invisible"]:
-                    self._contact_offline(handle)
+                    now_offline.append(handle)
+
+        self._contacts_online(now_online)
+        for handle in now_offline:
+            self._contact_offline(handle)
 
     def _request_avatar_cb(self, handle, new_avatar_token, avatar, mime_type):
         jid = self._online_contacts[handle]
