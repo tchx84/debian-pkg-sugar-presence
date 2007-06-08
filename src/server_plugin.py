@@ -363,10 +363,6 @@ class ServerPlugin(gobject.GObject):
         # FIXME: figure out why the server can't figure this out itself
         return activity_id + '@conference.' + self._account['server']
 
-    def _log_error_cb(self, msg, err):
-        """Log a message (error) at debug level with prefix msg"""
-        _logger.debug("Error %s: %s", msg, err)
-
     def _reconnect_cb(self):
         """Attempt to reconnect to the server"""
         self.start()
@@ -661,8 +657,8 @@ class ServerPlugin(gobject.GObject):
             self._conn[CONN_INTERFACE_AVATARS].RequestAvatar(handle,
                     reply_handler=lambda *args: self._request_avatar_cb(handle,
                         new_avatar_token, *args),
-                    error_handler=lambda e: self._log_error_cb(
-                        "getting avatar", e))
+                    error_handler=lambda e:
+                        _logger.warning('Error getting avatar: %s', e))
         else:
             self.emit("avatar-updated", handle, icon)
 
