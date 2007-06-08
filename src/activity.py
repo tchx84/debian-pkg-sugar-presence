@@ -28,6 +28,9 @@ from telepathy.constants import (CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
 from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
                                   PROPERTIES_INTERFACE)
 
+
+CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
+
 _ACTIVITY_PATH = "/org/laptop/Sugar/Presence/Activities/"
 _ACTIVITY_INTERFACE = "org.laptop.Sugar.Presence.Activity"
 
@@ -696,7 +699,19 @@ class Activity(ExportedGObject):
         for (key, value) in self._custom_props.items():
             props[key] = value
 
-        self._tp.set_activity_properties(self._id, props)
+        conn = self._tp.get_connection()
+
+        def properties_set(e=None):
+            if e is None:
+                _logger.debug('Successfully set activity properties for %s',
+                              self._id)
+            else:
+                _logger.debug('Failed to set activity properties for %s: %s',
+                              self._id, e)
+
+        conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].SetProperties(self._room,
+                props, reply_handler=properties_set,
+                error_handler=properties_set)
 
     def set_properties(self, properties):
         """Sets name, colour and/or type properties for this activity all
