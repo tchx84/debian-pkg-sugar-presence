@@ -81,6 +81,8 @@ class BuddyIconCache(object):
         self._token = token
         self._save_cache()
 
+buddy_icon_cache = BuddyIconCache()
+
 if __name__ == "__main__":
     my_cache = BuddyIconCache()
 

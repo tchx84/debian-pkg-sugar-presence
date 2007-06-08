@@ -17,14 +17,29 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import os
+import logging
+try:
+    # Python >= 2.5
+    from hashlib import md5 as new_md5
+except ImportError:
+    from md5 import new as new_md5
+
 import gobject
+import gtk
 import dbus
 import dbus.service
 from dbus.gobject_service import ExportedGObject
-import psutils
+from telepathy.constants import CONNECTION_STATUS_CONNECTED
+from telepathy.interfaces import (CONN_INTERFACE_ALIASING,
+                                  CONN_INTERFACE_AVATARS)
 
 from sugar import env, profile
-import logging
+
+import psutils
+from buddyiconcache import buddy_icon_cache
+
+
+CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 
 _BUDDY_PATH = "/org/laptop/Sugar/Presence/Buddies/"
 _BUDDY_INTERFACE = "org.laptop.Sugar.Presence.Buddy"
@@ -42,6 +57,41 @@ _PROP_OBJID = 'objid'
 _PROP_IP4_ADDRESS = "ip4-address"
 
 _logger = logging.getLogger('s-p-s.buddy')
+
+
+def _noop(*args, **kwargs):
+    pass
+
+def _buddy_icon_save_cb(buf, data):
+    data[0] += buf
+    return True
+
+def _get_buddy_icon_at_size(icon, maxw, maxh, maxsize):
+    loader = gtk.gdk.PixbufLoader()
+    loader.write(icon)
+    loader.close()
+    unscaled_pixbuf = loader.get_pixbuf()
+    del loader
+
+    pixbuf = unscaled_pixbuf.scale_simple(maxw, maxh, gtk.gdk.INTERP_BILINEAR)
+    del unscaled_pixbuf
+
+    data = [""]
+    quality = 90
+    img_size = maxsize + 1
+    while img_size > maxsize:
+        data = [""]
+        pixbuf.save_to_callback(_buddy_icon_save_cb, "jpeg",
+                                {"quality":"%d" % quality}, data)
+        quality -= 10
+        img_size = len(data[0])
+    del pixbuf
+
+    if img_size > maxsize:
+        data = [""]
+        raise RuntimeError("could not size image less than %d bytes" % maxsize)
+
+    return str(data[0])
 
 
 class Buddy(ExportedGObject):
@@ -190,7 +240,6 @@ class Buddy(ExportedGObject):
             if str(value) != self._icon:
                 self._icon = str(value)
                 self.IconChanged(self._icon)
-                self.emit('icon-changed', self._icon)
         elif pspec.name == _PROP_NICK:
             self._nick = value
         elif pspec.name == _PROP_COLOR:
@@ -468,9 +517,12 @@ class Buddy(ExportedGObject):
                     dbus_changed[key] = ""
             self.PropertyChanged(dbus_changed)
 
-            self.emit('property-changed', changed_props)
+            self._property_changed(changed_props)
 
         self._update_validity()
+
+    def _property_changed(self, changed_props):
+        pass
 
     def _update_validity(self):
         """Check whether we are now valid
@@ -526,7 +578,99 @@ class GenericOwner(Buddy):
         Buddy.__init__(self, bus, object_id, **kwargs)
         self._owner = True
 
-        self._bus = dbus.SessionBus()
+        self._bus = bus
+
+    def _set_self_alias(self, tp):
+        self_handle = self.handles[tp]
+        conn = tp.get_connection()
+        conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
+                reply_handler=_noop,
+                error_handler=lambda e:
+                    _logger.warning('Error setting alias: %s', e))
+        # Hack so we can use this as a timeout handler
+        return False
+
+    def _set_self_olpc_properties(self, tp):
+        conn = tp.get_connection()
+        # FIXME: omit color/key/ip4-address if None?
+        conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(
+                {'color': self._color or '', 'key': self._key or '',
+                 'ip4-address': self._ip4_address or '' },
+                reply_handler=_noop,
+                error_handler=lambda e:
+                    _logger.warning('Error setting alias: %s', e))
+        # Hack so we can use this as a timeout handler
+        return False
+
+    def add_telepathy_handle(self, tp_client, handle):
+        Buddy.add_telepathy_handle(self, tp_client, handle)
+
+        self._set_self_olpc_properties(tp_client)
+        self._set_self_alias(tp_client)
+        # Hack; send twice to make sure the server gets it
+        gobject.timeout_add(1000, lambda: self._set_self_alias(tp_client))
+
+        # FIXME: using private API, for now
+        tp_client._set_self_activities()
+        tp_client._set_self_current_activity()
+
+        self._set_self_avatar(tp_client)
+
+    def IconChanged(self, icon_data):
+        # As well as emitting the D-Bus signal, prod the Telepathy
+        # connection manager
+        Buddy.IconChanged(self, icon_data)
+        for tp in self.handles.iterkeys():
+            self._set_self_avatar(tp)
+
+    def _set_self_avatar(self, tp):
+        conn = tp.get_connection()
+        icon_data = self._icon
+
+        m = new_md5()
+        m.update(icon_data)
+        digest = m.hexdigest()
+
+        self_handle = self.handles[tp]
+        token = conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
+                [self_handle])[0]
+
+        if buddy_icon_cache.check_avatar(conn.object_path, digest,
+                                         token):
+            # avatar is up to date
+            return
+
+        def set_self_avatar_cb(token):
+            buddy_icon_cache.set_avatar(conn.object_path, digest, token)
+
+        types, minw, minh, maxw, maxh, maxsize = \
+                conn[CONN_INTERFACE_AVATARS].GetAvatarRequirements()
+        if not "image/jpeg" in types:
+            _logger.debug("server does not accept JPEG format avatars.")
+            return
+
+        img_data = _get_buddy_icon_at_size(icon_data, min(maxw, 96),
+                                           min(maxh, 96), maxsize)
+        conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
+                reply_handler=set_self_avatar_cb,
+                error_handler=lambda e:
+                    _logger.warning('Error setting avatar: %s', e))
+
+    def _property_changed(self, changed_props):
+        for tp in self.handles.iterkeys():
+
+            if changed_props.has_key("current-activity"):
+                tp._set_self_current_activity()
+
+            if changed_props.has_key("nick"):
+                self._set_self_alias(tp)
+                # Hack; send twice to make sure the server gets it
+                gobject.timeout_add(1000, lambda: self._set_self_alias(tp))
+
+            if (changed_props.has_key("color") or
+                changed_props.has_key("ip4-address")):
+                if tp.status == CONNECTION_STATUS_CONNECTED:
+                    self._set_self_olpc_properties(tp)
 
     def _ip4_address_changed_cb(self, monitor, address):
         """Handle IPv4 address change, set property to generate event"""

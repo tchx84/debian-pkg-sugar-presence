@@ -21,11 +21,6 @@ import logging
 import os
 import sys
 from string import hexdigits
-try:
-    # Python >= 2.5
-    from hashlib import md5
-except ImportError:
-    from md5 import new as md5
 
 # Other libraries
 import dbus
@@ -49,6 +44,7 @@ from sugar import util
 
 # Presence Service local modules
 import psutils
+from buddyiconcache import buddy_icon_cache
 
 
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
@@ -60,37 +56,6 @@ _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/jabber/"
 _logger = logging.getLogger('s-p-s.server_plugin')
 
 _RECONNECT_TIMEOUT = 5000
-
-def _buddy_icon_save_cb(buf, data):
-    data[0] += buf
-    return True
-
-def _get_buddy_icon_at_size(icon, maxw, maxh, maxsize):
-    loader = gtk.gdk.PixbufLoader()
-    loader.write(icon)
-    loader.close()
-    unscaled_pixbuf = loader.get_pixbuf()
-    del loader
-
-    pixbuf = unscaled_pixbuf.scale_simple(maxw, maxh, gtk.gdk.INTERP_BILINEAR)
-    del unscaled_pixbuf
-
-    data = [""]
-    quality = 90
-    img_size = maxsize + 1
-    while img_size > maxsize:
-        data = [""]
-        pixbuf.save_to_callback(_buddy_icon_save_cb, "jpeg",
-                                {"quality":"%d" % quality}, data)
-        quality -= 10
-        img_size = len(data[0])
-    del pixbuf
-
-    if img_size > maxsize:
-        data = [""]
-        raise RuntimeError("could not size image less than %d bytes" % maxsize)
-
-    return str(data[0])
 
 
 class ServerPlugin(gobject.GObject):
@@ -159,7 +124,7 @@ class ServerPlugin(gobject.GObject):
             (gobject.SIGNAL_RUN_FIRST, None, [object, object, object]),
     }
 
-    def __init__(self, registry, owner, icon_cache):
+    def __init__(self, registry, owner):
         """Initialize the ServerPlugin instance
 
         registry -- telepathy.client.ManagerRegistry from the
@@ -171,7 +136,6 @@ class ServerPlugin(gobject.GObject):
         gobject.GObject.__init__(self)
 
         self._conn = None
-        self._icon_cache = icon_cache
 
         self._registry = registry
         self._online_contacts = {}  # handle -> jid
@@ -182,9 +146,6 @@ class ServerPlugin(gobject.GObject):
         self._joined_activities = []
 
         self._owner = owner
-        self._owner.connect("property-changed",
-                            self._owner_property_changed_cb)
-        self._owner.connect("icon-changed", self._owner_icon_changed_cb)
         self.self_handle = None
 
         self._account = self._get_account_info()
@@ -201,6 +162,11 @@ class ServerPlugin(gobject.GObject):
         self._subscribe_local_pending = set()
         self._subscribe_remote_pending = set()
 
+    @property
+    def status(self):
+        """Return the Telepathy connection status."""
+        return self._conn_status
+
     def _ip4_address_changed_cb(self, ip4am, address):
         _logger.debug("::: IP4 address now %s", address)
         if address:
@@ -212,40 +178,6 @@ class ServerPlugin(gobject.GObject):
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
             self.cleanup()
-
-    def _owner_property_changed_cb(self, owner, properties):
-        """Local user's configuration properties have changed
-
-        owner -- the Buddy object for the local user
-        properties -- set of updated properties
-
-        calls:
-
-            _set_self_current_activity    current-activity
-            _set_self_alias    nick
-            _set_self_olpc_properties   color
-
-        depending on which properties are present in the
-        set of properties.
-        """
-        _logger.debug("Owner properties changed: %s", properties)
-
-        if properties.has_key("current-activity"):
-            self._set_self_current_activity()
-
-        if properties.has_key("nick"):
-            self._set_self_alias()
-            # Hack; send twice to make sure the server gets it
-            gobject.timeout_add(1000, self._set_self_alias)
-
-        if properties.has_key("color") or properties.has_key("ip4-address"):
-            if self._conn_status == CONNECTION_STATUS_CONNECTED:
-                self._set_self_olpc_properties()
-
-    def _owner_icon_changed_cb(self, owner, icon):
-        """Owner has changed their icon, forward to network"""
-        _logger.debug("Owner icon changed to size %d", len(str(icon)))
-        self._set_self_avatar(icon)
 
     def _get_account_info(self):
         """Retrieve metadata dictionary describing this account
@@ -423,50 +355,9 @@ class ServerPlugin(gobject.GObject):
                 'ActivityPropertiesChanged',
                 self._activity_properties_changed_cb)
 
-        # Set initial buddy properties, avatar, and activities
-        self._set_self_olpc_properties()
-        self._set_self_alias()
-        # Hack; send twice to make sure the server gets it
-        gobject.timeout_add(1000, self._set_self_alias)
-        self._set_self_activities()
-        self._set_self_current_activity()
-        self._set_self_avatar()
-
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
         return True
-
-    def _set_self_avatar(self, icon_data=None):
-        if not icon_data:
-            icon_data = self._owner.props.icon
-
-        m = md5()
-        m.update(icon_data)
-        digest = m.hexdigest()
-
-        self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
-        token = self._conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
-                [self_handle])[0]
-
-        if self._icon_cache.check_avatar(self._conn.object_path, digest,
-                                         token):
-            # avatar is up to date
-            return
-
-        def set_self_avatar_cb(token):
-            self._icon_cache.set_avatar(self._conn.object_path, digest, token)
-
-        types, minw, minh, maxw, maxh, maxsize = \
-                self._conn[CONN_INTERFACE_AVATARS].GetAvatarRequirements()
-        if not "image/jpeg" in types:
-            _logger.debug("server does not accept JPEG format avatars.")
-            return
-
-        img_data = _get_buddy_icon_at_size(icon_data, min(maxw, 96),
-                                           min(maxh, 96), maxsize)
-        self._conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
-                reply_handler=set_self_avatar_cb,
-                error_handler=lambda e: self._log_error_cb("setting avatar", e))
 
     def emit_joined_activity(self, activity_id, room):
         self._joined_activities.append((activity_id, room))
@@ -484,29 +375,6 @@ class ServerPlugin(gobject.GObject):
     def _log_error_cb(self, msg, err):
         """Log a message (error) at debug level with prefix msg"""
         _logger.debug("Error %s: %s", msg, err)
-
-    def _set_self_olpc_properties(self):
-        """Set color and key on our Telepathy server identity"""
-        props = {}
-        props['color'] = self._owner.props.color
-        props['key'] = dbus.ByteArray(self._owner.props.key)
-        addr = self._owner.props.ip4_address
-        if not addr:
-            props['ip4-address'] = ""
-        else:
-            props['ip4-address'] = addr
-        self._conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
-                reply_handler=self._ignore_success_cb,
-                error_handler=lambda e: self._log_error_cb("setting properties", e))
-
-    def _set_self_alias(self):
-        """Forwarded to SetActivities on AliasInfo channel"""
-        alias = self._owner.props.nick
-        self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
-        self._conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle : alias},
-                reply_handler=self._ignore_success_cb,
-                error_handler=lambda e: self._log_error_cb("setting alias", e))
-        return False
 
     def _set_self_activities(self):
         """Forward set of joined activities to network
@@ -815,7 +683,7 @@ class ServerPlugin(gobject.GObject):
             logging.debug("Handle %s not valid yet..." % handle)
             return
         icon = ''.join(map(chr, avatar))
-        self._icon_cache.store_icon(self._conn.object_path, jid,
+        buddy_icon_cache.store_icon(self._conn.object_path, jid,
                                     new_avatar_token, icon)
         self.emit("avatar-updated", handle, icon)
 
@@ -835,7 +703,7 @@ class ServerPlugin(gobject.GObject):
             _logger.debug("Handle %s not valid yet...", handle)
             return
 
-        icon = self._icon_cache.get_icon(self._conn.object_path, jid,
+        icon = buddy_icon_cache.get_icon(self._conn.object_path, jid,
                                          new_avatar_token)
         if not icon:
             # cache miss
