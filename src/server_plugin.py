@@ -142,8 +142,6 @@ class ServerPlugin(gobject.GObject):
 
         # activity id -> handle
         self._activities = {}
-        # (activity_id, handle of the activity channel)
-        self._joined_activities = []
 
         self._owner = owner
         self.self_handle = None
@@ -359,61 +357,15 @@ class ServerPlugin(gobject.GObject):
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
         return True
 
-    def emit_joined_activity(self, activity_id, room):
-        self._joined_activities.append((activity_id, room))
-        self._set_self_activities()
-
     def suggest_room_for_activity(self, activity_id):
         """Suggest a room to use to share the given activity.
         """
         # FIXME: figure out why the server can't figure this out itself
         return activity_id + '@conference.' + self._account['server']
 
-    def _ignore_success_cb(self):
-        """Ignore an event (null-operation)"""
-
     def _log_error_cb(self, msg, err):
         """Log a message (error) at debug level with prefix msg"""
         _logger.debug("Error %s: %s", msg, err)
-
-    def _set_self_activities(self):
-        """Forward set of joined activities to network
-
-        uses SetActivities on BuddyInfo channel
-        """
-        self._conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
-                self._joined_activities,
-                reply_handler=self._ignore_success_cb,
-                error_handler=lambda e: self._log_error_cb("setting activities", e))
-
-    def _set_self_current_activity(self):
-        """Forward our current activity (or "") to network
-
-        uses SetCurrentActivity on BuddyInfo channel
-        """
-        cur_activity = self._owner.props.current_activity
-        cur_activity_handle = 0
-        if not cur_activity:
-            cur_activity = ""
-        else:
-            cur_activity_handle = self._get_handle_for_activity(cur_activity)
-            if not cur_activity_handle:
-                # dont advertise a current activity that's not shared
-                cur_activity = ""
-
-        _logger.debug("Setting current activity to '%s' (handle %s)",
-                      cur_activity, cur_activity_handle)
-        self._conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
-                cur_activity_handle,
-                reply_handler=self._ignore_success_cb,
-                error_handler=lambda e: self._log_error_cb("setting current activity", e))
-
-    def _get_handle_for_activity(self, activity_id):
-        """Retrieve current handle for given activity or None"""
-        for (act, handle) in self._joined_activities:
-            if activity_id == act:
-                return handle
-        return None
 
     def _reconnect_cb(self):
         """Attempt to reconnect to the server"""
@@ -499,7 +451,6 @@ class ServerPlugin(gobject.GObject):
         for handle in self._online_contacts.keys():
             self._contact_offline(handle)
         self._online_contacts = {}
-        self._joined_activities = []
         self._activities = {}
 
         if self._reconnect_id > 0:

@@ -166,7 +166,8 @@ class Buddy(ExportedGObject):
         self._object_id = object_id
         self._object_path = dbus.ObjectPath(_BUDDY_PATH + object_id)
 
-        self._activities = {}   # Activity ID -> Activity
+        #: activity ID -> activity
+        self._activities = {}
         self._activity_sigids = {}
         self.handles = {} # tp client -> handle
 
@@ -569,6 +570,9 @@ class GenericOwner(Buddy):
         self._key_hash = kwargs.pop("key_hash", None)
         self._registered = kwargs.pop("registered", False)
 
+        #: Telepathy plugin -> dict { activity ID -> room handle }
+        self._activities_by_connection = {}
+
         self._ip4_addr_monitor = psutils.IP4AddressMonitor.get_instance()
         self._ip4_addr_monitor.connect("address-changed",
                                        self._ip4_address_changed_cb)
@@ -579,6 +583,54 @@ class GenericOwner(Buddy):
         self._owner = True
 
         self._bus = bus
+
+    def add_owner_activity(self, tp, activity_id, activity_room):
+        # FIXME: this probably duplicates something else (_activities?)
+        # but for now I'll keep the same duplication as before.
+        # Equivalent code used to be in ServerPlugin.
+        id_to_act = self._activities_by_connection.setdefault(tp, {})
+        id_to_act[activity_id] = activity_room
+
+        self._set_self_activities(tp)
+
+    def _set_self_activities(self, tp):
+        """Forward set of joined activities to network
+
+        uses SetActivities on BuddyInfo channel
+        """
+        conn = tp.get_connection()
+        conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
+                self._activities_by_connection[tp].iteritems(),
+                reply_handler=_noop,
+                error_handler=lambda e:
+                    _logger.warning("setting activities failed: %s", e))
+
+    def _set_self_current_activity(self, tp):
+        """Forward our current activity (or "") to network
+        """
+        cur_activity = self._current_activity
+        if not cur_activity:
+            cur_activity = ""
+            cur_activity_handle = 0
+        else:
+            id_to_act = self._activities_by_connection.setdefault(tp, {})
+            cur_activity_handle = id_to_act.get(cur_activity)
+            if cur_activity_handle is None:
+                # don't advertise a current activity that's not shared on
+                # this connection
+                # FIXME: this gives us a different current activity on each
+                # connection - need to make sure clients are OK with this
+                # (at the moment, PS isn't!)
+                cur_activity = ""
+
+        _logger.debug("Setting current activity to '%s' (handle %s)",
+                      cur_activity, cur_activity_handle)
+        conn = tp.get_connection()
+        conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
+                cur_activity_handle,
+                reply_handler=_noop,
+                error_handler=lambda e:
+                    _logger.warning("setting current activity failed: %s", e))
 
     def _set_self_alias(self, tp):
         self_handle = self.handles[tp]
@@ -610,9 +662,8 @@ class GenericOwner(Buddy):
         # Hack; send twice to make sure the server gets it
         gobject.timeout_add(1000, lambda: self._set_self_alias(tp_client))
 
-        # FIXME: using private API, for now
-        tp_client._set_self_activities()
-        tp_client._set_self_current_activity()
+        self._set_self_activities(tp_client)
+        self._set_self_current_activity(tp_client)
 
         self._set_self_avatar(tp_client)
 
@@ -660,7 +711,7 @@ class GenericOwner(Buddy):
         for tp in self.handles.iterkeys():
 
             if changed_props.has_key("current-activity"):
-                tp._set_self_current_activity()
+                self._set_self_current_activity(tp)
 
             if changed_props.has_key("nick"):
                 self._set_self_alias(tp)

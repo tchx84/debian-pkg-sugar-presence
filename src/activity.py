@@ -519,7 +519,7 @@ class Activity(ExportedGObject):
     def _joined_cb(self, text_channel):
         """XXX - not documented yet
         """
-        self._tp.emit_joined_activity(self._id, self._room)
+        self._ps.owner.add_owner_activity(self._tp, self._id, self._room)
 
         verb = self._join_is_sharing and 'Share' or 'Join'
 
