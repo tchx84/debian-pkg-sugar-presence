@@ -38,6 +38,7 @@ from buddy import Buddy, ShellOwner
 from activity import Activity
 from psutils import pubkey_to_keyid
 
+CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
 _PRESENCE_SERVICE = "org.laptop.Sugar.Presence"
@@ -114,8 +115,6 @@ class PresenceService(ExportedGObject):
         self._server_plugin.connect('avatar-updated', self._avatar_updated)
         self._server_plugin.connect('buddy-properties-changed',
                                     self._buddy_properties_changed)
-        self._server_plugin.connect('buddy-activities-changed',
-                                    self._buddy_activities_changed)
         self._server_plugin.connect('activity-invitation',
                                     self._activity_invitation)
         self._server_plugin.connect('private-invitation',
@@ -172,6 +171,12 @@ class PresenceService(ExportedGObject):
                 activity_properties_changed)
         self._conn_matches[conn].append(m)
 
+        def buddy_activities_changed(contact, activities):
+            self._buddy_activities_changed(tp, contact, activities)
+        m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
+                'ActivitiesChanged', buddy_activities_changed)
+        self._conn_matches[conn].append(m)
+
     def _tp_disconnected(self, tp):
         if tp.self_handle is not None:
             self._handles_buddies.setdefault(tp, {}).pop(
@@ -207,6 +212,17 @@ class PresenceService(ExportedGObject):
         # store the handle of the buddy for this CM
         buddy.add_telepathy_handle(tp, handle)
         buddy.set_properties(props)
+
+        # kick off a request for their current activities
+        # FIXME: move this to the Buddy?
+        conn = tp.get_connection()
+
+        def got_activities(activities):
+            self._buddy_activities_changed(tp, handle, activities)
+        conn[CONN_INTERFACE_BUDDY_INFO].GetActivities(handle,
+            reply_handler=got_activities,
+            error_handler=lambda e: _logger.warning('%r: Error getting '
+                'activities: %s', buddy, e))
 
     def _buddy_validity_changed_cb(self, buddy, valid):
         if valid:
@@ -287,10 +303,16 @@ class PresenceService(ExportedGObject):
             pass
 
     def _buddy_activities_changed(self, tp, contact_handle, activities):
+        activities = dict(activities)
         _logger.debug("Handle %s activities changed: %s", contact_handle,
                       activities)
         buddies = self._handles_buddies[tp]
         buddy = buddies.get(contact_handle)
+
+        if buddy is self._owner:
+            # ignore network events for Owner activity changes since those
+            # are handled locally
+            return
 
         if not buddy:
             # We don't know this buddy

@@ -96,12 +96,6 @@ class ServerPlugin(gobject.GObject):
             #   properties: dict {name: str => property: object}
             # FIXME: are these all the properties or just those that changed?
             (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
-        'buddy-activities-changed':
-            # OLPC activities changed
-            # args:
-            #   contact handle: int
-            #   activities: dict {activity_id: str => room: int or long}
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'activity-invitation':
             # We were invited to join an activity
             # args:
@@ -338,9 +332,6 @@ class ServerPlugin(gobject.GObject):
                 'PropertiesChanged', self._buddy_properties_changed_cb)
         self._matches.append(m)
         m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
-                'ActivitiesChanged', self._buddy_activities_changed_cb)
-        self._matches.append(m)
-        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'CurrentActivityChanged',
                 self._buddy_current_activity_changed_cb)
         self._matches.append(m)
@@ -465,17 +456,6 @@ class ServerPlugin(gobject.GObject):
             self.emit("contact-offline", handle)
         del self._online_contacts[handle]
 
-    def _contact_online_activities_cb(self, handle, activities):
-        """Handle contact's activity list update"""
-        self._buddy_activities_changed_cb(handle, activities)
-
-    def _contact_online_activities_error_cb(self, handle, err):
-        """Handle contact's activity list being unavailable"""
-        _logger.debug("Handle %s - Error getting activities: %s",
-                      handle, err)
-        # Don't drop the buddy if we can't get their activities, for now
-        #self._contact_offline(handle)
-
     def _contact_online_aliases_cb(self, handle, props, aliases):
         """Handle contact's alias being received (do further queries)"""
         if not self._conn or not aliases or not len(aliases):
@@ -491,12 +471,6 @@ class ServerPlugin(gobject.GObject):
         objid = self.identify_contacts(None, [handle])[handle]
 
         self.emit("contact-online", objid, handle, props)
-
-        self._conn[CONN_INTERFACE_BUDDY_INFO].GetActivities(handle,
-            reply_handler=lambda *args: self._contact_online_activities_cb(
-                handle, *args),
-            error_handler=lambda e: self._contact_online_activities_error_cb(
-                handle, e))
 
     def _contact_online_aliases_error_cb(self, handle, props, retry, err):
         """Handle failure to retrieve given user's alias/information"""
@@ -694,21 +668,6 @@ class ServerPlugin(gobject.GObject):
         if (self._online_contacts.has_key(handle) and
                 self._online_contacts[handle]):
             self.emit("buddy-properties-changed", handle, properties)
-
-    def _buddy_activities_changed_cb(self, handle, activities):
-        """Handle update of given user (handle)'s activities"""
-        if handle == self._conn[CONN_INTERFACE].GetSelfHandle():
-            # ignore network events for Owner activity changes since those
-            # are handled locally
-            return
-        if (not self._online_contacts.has_key(handle) or
-                not self._online_contacts[handle]):
-            return
-
-        activities_dict = {}
-        for act_id, act_handle in activities:
-            activities_dict[act_id] = act_handle
-        self.emit("buddy-activities-changed", handle, activities_dict)
 
     def _buddy_current_activity_changed_cb(self, handle, activity, channel):
         """Handle update of given user (handle)'s current activity"""
