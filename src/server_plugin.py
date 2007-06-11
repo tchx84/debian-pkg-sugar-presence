@@ -620,7 +620,7 @@ class ServerPlugin(gobject.GObject):
 
         if identifiers is None:
             identifiers = self._conn[CONN_INTERFACE].InspectHandles(
-                HANDLE_TYPE_CONTACT, identifiers)
+                HANDLE_TYPE_CONTACT, owners)
 
         ret = {}
         for handle, jid in izip(handles, identifiers):
