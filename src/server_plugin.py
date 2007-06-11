@@ -137,6 +137,11 @@ class ServerPlugin(gobject.GObject):
 
         self._conn = None
 
+        #: List of dbus-python SignalMatch objects representing signal match
+        #: rules associated with the connection, so we don't leak the match
+        #: rules when disconnected.
+        self._matches = []
+
         self._registry = registry
         self._online_contacts = {}  # handle -> jid
 
@@ -255,10 +260,12 @@ class ServerPlugin(gobject.GObject):
             conn = Connection(name, path)
             del acct
 
-        conn[CONN_INTERFACE].connect_to_signal('StatusChanged',
-                                               self._status_changed_cb)
-        conn[CONN_INTERFACE].connect_to_signal('NewChannel',
-                                               self._new_channel_cb)
+        m = conn[CONN_INTERFACE].connect_to_signal('StatusChanged',
+                                                   self._status_changed_cb)
+        self._matches.append(m)
+        m = conn[CONN_INTERFACE].connect_to_signal('NewChannel',
+                                                   self._new_channel_cb)
+        self._matches.append(m)
 
         # hack
         conn._valid_interfaces.add(CONN_INTERFACE_PRESENCE)
@@ -267,8 +274,9 @@ class ServerPlugin(gobject.GObject):
         conn._valid_interfaces.add(CONN_INTERFACE_AVATARS)
         conn._valid_interfaces.add(CONN_INTERFACE_ALIASING)
 
-        conn[CONN_INTERFACE_PRESENCE].connect_to_signal('PresenceUpdate',
+        m = conn[CONN_INTERFACE_PRESENCE].connect_to_signal('PresenceUpdate',
             self._presence_update_cb)
+        self._matches.append(m)
 
         self._conn = conn
         status = self._conn[CONN_INTERFACE].GetStatus()
@@ -304,8 +312,9 @@ class ServerPlugin(gobject.GObject):
         publish = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
                 HANDLE_TYPE_LIST, pub_handle, True)
         self._publish_channel = publish
-        publish[CHANNEL_INTERFACE_GROUP].connect_to_signal('MembersChanged',
-                self._publish_members_changed_cb)
+        m = publish[CHANNEL_INTERFACE_GROUP].connect_to_signal(
+                'MembersChanged', self._publish_members_changed_cb)
+        self._matches.append(m)
         publish_handles, local_pending, remote_pending = \
                 publish[CHANNEL_INTERFACE_GROUP].GetAllMembers()
 
@@ -313,8 +322,9 @@ class ServerPlugin(gobject.GObject):
         subscribe = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
                 HANDLE_TYPE_LIST, sub_handle, True)
         self._subscribe_channel = subscribe
-        subscribe[CHANNEL_INTERFACE_GROUP].connect_to_signal('MembersChanged',
-                self._subscribe_members_changed_cb)
+        m = subscribe[CHANNEL_INTERFACE_GROUP].connect_to_signal(
+                'MembersChanged', self._subscribe_members_changed_cb)
+        self._matches.append(m)
         subscribe_handles, subscribe_lp, subscribe_rp = \
                 subscribe[CHANNEL_INTERFACE_GROUP].GetAllMembers()
         self._subscribe_members = set(subscribe_handles)
@@ -337,21 +347,27 @@ class ServerPlugin(gobject.GObject):
             _logger.debug('OLPC information not available')
             return False
 
-        self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
+        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'PropertiesChanged', self._buddy_properties_changed_cb)
-        self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
+        self._matches.append(m)
+        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'ActivitiesChanged', self._buddy_activities_changed_cb)
-        self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
+        self._matches.append(m)
+        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'CurrentActivityChanged',
                 self._buddy_current_activity_changed_cb)
+        self._matches.append(m)
 
         self._conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
                 self._avatar_updated_cb)
+        self._matches.append(m)
         self._conn[CONN_INTERFACE_ALIASING].connect_to_signal('AliasesChanged',
                 self._alias_changed_cb)
+        self._matches.append(m)
         self._conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].connect_to_signal(
                 'ActivityPropertiesChanged',
                 self._activity_properties_changed_cb)
+        self._matches.append(m)
 
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
@@ -436,6 +452,12 @@ class ServerPlugin(gobject.GObject):
 
     def cleanup(self):
         """If we still have a connection, disconnect it"""
+
+        matches = self._matches
+        self._matches = []
+        for match in matches:
+            match.remove()
+
         if self._conn:
             try:
                 self._conn[CONN_INTERFACE].Disconnect()
