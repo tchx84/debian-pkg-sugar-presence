@@ -44,7 +44,6 @@ from sugar import util
 
 # Presence Service local modules
 import psutils
-from buddyiconcache import buddy_icon_cache
 
 
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
@@ -84,12 +83,6 @@ class ServerPlugin(gobject.GObject):
             # Connection status changed.
             # args: status, reason as for Telepathy StatusChanged
             (gobject.SIGNAL_RUN_FIRST, None, [int, int]),
-        'avatar-updated':
-            # Contact's avatar has changed
-            # args:
-            #   contact handle: int
-            #   icon data: str
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'buddy-properties-changed':
             # OLPC buddy properties changed; as for PropertiesChanged
             # args:
@@ -342,9 +335,6 @@ class ServerPlugin(gobject.GObject):
                 self._buddy_current_activity_changed_cb)
         self._matches.append(m)
 
-        self._conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
-                self._avatar_updated_cb)
-        self._matches.append(m)
         self._conn[CONN_INTERFACE_ALIASING].connect_to_signal('AliasesChanged',
                 self._alias_changed_cb)
         self._matches.append(m)
@@ -618,44 +608,6 @@ class ServerPlugin(gobject.GObject):
         for handle in now_offline:
             self._contact_offline(handle)
 
-    def _request_avatar_cb(self, handle, new_avatar_token, avatar, mime_type):
-        jid = self._online_contacts[handle]
-        if not jid:
-            logging.debug("Handle %s not valid yet..." % handle)
-            return
-        icon = ''.join(map(chr, avatar))
-        buddy_icon_cache.store_icon(self._conn.object_path, jid,
-                                    new_avatar_token, icon)
-        self.emit("avatar-updated", handle, icon)
-
-    def _avatar_updated_cb(self, handle, new_avatar_token):
-        """Handle update of given user (handle)'s avatar"""
-        if handle == self._conn[CONN_INTERFACE].GetSelfHandle():
-            # ignore network events for Owner property changes since those
-            # are handled locally
-            return
-
-        if not self._online_contacts.has_key(handle):
-            _logger.debug("Handle %s unknown.", handle)
-            return
-
-        jid = self._online_contacts[handle]
-        if not jid:
-            _logger.debug("Handle %s not valid yet...", handle)
-            return
-
-        icon = buddy_icon_cache.get_icon(self._conn.object_path, jid,
-                                         new_avatar_token)
-        if not icon:
-            # cache miss
-            self._conn[CONN_INTERFACE_AVATARS].RequestAvatar(handle,
-                    reply_handler=lambda *args: self._request_avatar_cb(handle,
-                        new_avatar_token, *args),
-                    error_handler=lambda e:
-                        _logger.warning('Error getting avatar: %s', e))
-        else:
-            self.emit("avatar-updated", handle, icon)
-
     def _alias_changed_cb(self, aliases):
         """Handle update of aliases for all users"""
         for handle, alias in aliases:
@@ -703,7 +655,7 @@ class ServerPlugin(gobject.GObject):
                     if local_pending:
                         self.emit('activity-invitation', handle)
                 def got_all_members_err(e):
-                    logger.debug('Unable to get channel members for %s:',
+                    _logger.debug('Unable to get channel members for %s:',
                                  object_path, exc_info=1)
 
                 group = channel[CHANNEL_INTERFACE_GROUP]

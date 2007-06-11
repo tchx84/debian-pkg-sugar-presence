@@ -25,7 +25,8 @@ from dbus.exceptions import DBusException
 from dbus.gobject_service import ExportedGObject
 from dbus.mainloop.glib import DBusGMainLoop
 from telepathy.client import ManagerRegistry, Connection
-from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE)
+from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
+    CONN_INTERFACE_AVATARS)
 from telepathy.constants import (CONNECTION_STATUS_CONNECTING,
     CONNECTION_STATUS_CONNECTED,
     CONNECTION_STATUS_DISCONNECTED)
@@ -112,7 +113,6 @@ class PresenceService(ExportedGObject):
         self._server_plugin.connect('status', self._server_status_cb)
         self._server_plugin.connect('contact-online', self._contact_online)
         self._server_plugin.connect('contact-offline', self._contact_offline)
-        self._server_plugin.connect('avatar-updated', self._avatar_updated)
         self._server_plugin.connect('buddy-properties-changed',
                                     self._buddy_properties_changed)
         self._server_plugin.connect('activity-invitation',
@@ -176,6 +176,12 @@ class PresenceService(ExportedGObject):
             self._buddy_activities_changed(tp, contact, activities)
         m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'ActivitiesChanged', buddy_activities_changed)
+        self._conn_matches[conn].append(m)
+
+        def avatar_updated(contact, avatar_token):
+            self._avatar_updated(tp, contact, avatar_token)
+        m = conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
+                avatar_updated)
         self._conn_matches[conn].append(m)
 
     def _tp_disconnected(self, tp):
@@ -254,11 +260,11 @@ class PresenceService(ExportedGObject):
         self._next_object_id = self._next_object_id + 1
         return self._next_object_id
 
-    def _avatar_updated(self, tp, handle, avatar):
+    def _avatar_updated(self, tp, handle, new_avatar_token):
         buddy = self._handles_buddies[tp].get(handle)
-        if buddy and not buddy.props.owner:
+        if buddy is not None and buddy is not self._owner:
             _logger.debug("Buddy %s icon updated" % buddy.props.nick)
-            buddy.props.icon = avatar
+            buddy.update_avatar(tp, new_avatar_token)
 
     def _buddy_properties_changed(self, tp, handle, properties):
         buddy = self._handles_buddies[tp].get(handle)

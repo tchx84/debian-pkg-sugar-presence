@@ -543,6 +543,34 @@ class Buddy(ExportedGObject):
         except AttributeError:
             self._valid = False
 
+    def update_avatar(self, tp, new_avatar_token):
+        """Handle update of the avatar"""
+        conn = tp.get_connection()
+        handle, identifier = self._handles[tp]
+
+        icon = buddy_icon_cache.get_icon(conn.object_path, identifier,
+                                         new_avatar_token)
+        if not icon:
+            # cache miss
+            def got_avatar(avatar, mime_type):
+                icon = str(icon)
+                buddy_icon_cache.store_icon(conn.object_path, identifier,
+                                            new_avatar_token, icon)
+                if self._icon != icon:
+                    self._icon = icon
+                    self.IconChanged(self._icon)
+
+            conn[CONN_INTERFACE_AVATARS].RequestAvatar(handle,
+                    reply_handler=got_avatar,
+                    error_handler=lambda e:
+                        _logger.warning('Error getting avatar for %r: %s',
+                                        self, e),
+                    byte_arrays=True)
+        else:
+            if self._icon != icon:
+                self._icon = icon
+                self.IconChanged(self._icon)
+
 
 class GenericOwner(Buddy):
     """Common functionality for Local User-like objects
@@ -744,6 +772,11 @@ class GenericOwner(Buddy):
     def set_registered(self, registered):
         """Customisation point: handle the registration of the owner"""
         raise RuntimeError("Subclasses must implement")
+
+    def update_avatar(self, tp, new_avatar_token):
+        # This should never get called because Owner avatar changes are
+        # driven by the Sugar shell, but just in case:
+        _logger.warning('GenericOwner.update_avatar() should not be called')
 
 
 class ShellOwner(GenericOwner):
