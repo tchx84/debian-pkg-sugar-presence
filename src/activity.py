@@ -187,6 +187,13 @@ class Activity(ExportedGObject):
                     reply_handler=self.set_properties,
                     error_handler=got_properties_err)
 
+    @property
+    def room_details(self):
+        """Return the Telepathy plugin on which this Activity can be joined
+        and the handle of the room representing it.
+        """
+        return (self._tp, self._room)
+
     def do_get_property(self, pspec):
         """Gets the value of a property associated with this activity.
 
@@ -542,7 +549,7 @@ class Activity(ExportedGObject):
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
-            self._join_cb(dbus.ObjectPath(self._object_path))
+            self._join_cb(self)
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
         except Exception, e:
             self._join_failed_cb(e)
@@ -606,7 +613,8 @@ class Activity(ExportedGObject):
     def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
 
-        async_cb -- Callback method to be called if join attempt is successful
+        async_cb -- Callback method to be called with the Activity as a
+            parameter if join attempt is successful
         async_err_cb -- Callback method to be called if join attempt is
                         unsuccessful
 

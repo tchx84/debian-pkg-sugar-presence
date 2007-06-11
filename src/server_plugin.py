@@ -105,23 +105,13 @@ class ServerPlugin(gobject.GObject):
         'activity-invitation':
             # We were invited to join an activity
             # args:
-            #   activity ID: str
             #   activity room handle: int or long
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [object]),
         'private-invitation':
             # We were invited to join a chat or a media call
             # args:
             #   channel object path
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
-        'activity-properties-changed':
-            # An activity's properties changed; as for
-            # ActivityPropertiesChanged
-            # args:
-            #   activity ID: str
-            #   activity room handle: int or long
-            #   properties: dict { str => object }
-            # FIXME: are these all the properties or just those that changed?
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object]),
     }
 
     def __init__(self, registry, owner):
@@ -144,9 +134,6 @@ class ServerPlugin(gobject.GObject):
 
         self._registry = registry
         self._online_contacts = {}  # handle -> jid
-
-        # activity id -> handle
-        self._activities = {}
 
         self._owner = owner
         self.self_handle = None
@@ -364,10 +351,6 @@ class ServerPlugin(gobject.GObject):
         self._conn[CONN_INTERFACE_ALIASING].connect_to_signal('AliasesChanged',
                 self._alias_changed_cb)
         self._matches.append(m)
-        self._conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].connect_to_signal(
-                'ActivityPropertiesChanged',
-                self._activity_properties_changed_cb)
-        self._matches.append(m)
 
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
@@ -469,7 +452,6 @@ class ServerPlugin(gobject.GObject):
         for handle in self._online_contacts.keys():
             self._contact_offline(handle)
         self._online_contacts = {}
-        self._activities = {}
 
         if self._reconnect_id > 0:
             gobject.source_remove(self._reconnect_id)
@@ -725,7 +707,6 @@ class ServerPlugin(gobject.GObject):
 
         activities_dict = {}
         for act_id, act_handle in activities:
-            self._activities[act_id] = act_handle
             activities_dict[act_id] = act_handle
         self.emit("buddy-activities-changed", handle, activities_dict)
 
@@ -753,18 +734,9 @@ class ServerPlugin(gobject.GObject):
         if (handle_type == HANDLE_TYPE_ROOM and
             channel_type == CHANNEL_TYPE_TEXT):
             def ready(channel):
-
-                for act_id, act_handle in self._activities.iteritems():
-                    if handle == act_handle:
-                        break
-                    else:
-                        return
-
                 def got_all_members(current, local_pending, remote_pending):
                     if local_pending:
-                        for act_id, act_handle in self._activities.iteritems():
-                            if handle == act_handle:
-                                self.emit('activity-invitation', act_id, handle)
+                        self.emit('activity-invitation', handle)
                 def got_all_members_err(e):
                     logger.debug('Unable to get channel members for %s:',
                                  object_path, exc_info=1)
@@ -781,13 +753,6 @@ class ServerPlugin(gobject.GObject):
               channel_type in (CHANNEL_TYPE_TEXT,
                                CHANNEL_TYPE_STREAMED_MEDIA)):
             self.emit("private-invitation", object_path)
-
-    def _activity_properties_changed_cb(self, room, properties):
-        """Handle update of properties for a "room" (activity handle)"""
-        for act_id, act_handle in self._activities.items():
-            if room == act_handle:
-                self.emit("activity-properties-changed", act_id, room, properties)
-                return
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to
