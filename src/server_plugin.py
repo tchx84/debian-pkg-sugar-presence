@@ -74,8 +74,7 @@ class ServerPlugin(gobject.GObject):
             #   contact identification (based on key ID or JID): str
             #   contact handle: int or long
             #   contact identifier (JID): str or unicode
-            #   dict {name: str => property: object}
-            (gobject.SIGNAL_RUN_FIRST, None, [str, object, object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [str, object, object]),
         'contact-offline':
             # Contact has gone offline.
             # args: contact handle
