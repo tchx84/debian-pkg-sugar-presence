@@ -203,6 +203,13 @@ class PresenceService(ExportedGObject):
                             conn.object_path)
 
         if CONN_INTERFACE_AVATARS in conn:
+            def avatar_retrieved(contact, avatar_token, avatar, mime_type):
+                self._avatar_updated(tp, contact, avatar_token, avatar,
+                                     mime_type)
+            m = conn[CONN_INTERFACE_AVATARS].connect_to_signal(
+                    'AvatarRetrieved', avatar_retrieved)
+            self._conn_matches[conn].append(m)
+
             def avatar_updated(contact, avatar_token):
                 self._avatar_updated(tp, contact, avatar_token)
             m = conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
@@ -302,11 +309,12 @@ class PresenceService(ExportedGObject):
         self._next_object_id = self._next_object_id + 1
         return self._next_object_id
 
-    def _avatar_updated(self, tp, handle, new_avatar_token):
+    def _avatar_updated(self, tp, handle, new_avatar_token, avatar=None,
+                        mime_type=None):
         buddy = self._handles_buddies[tp].get(handle)
         if buddy is not None and buddy is not self._owner:
             _logger.debug("Buddy %s icon updated" % buddy.props.nick)
-            buddy.update_avatar(tp, new_avatar_token)
+            buddy.update_avatar(tp, new_avatar_token, avatar, mime_type)
 
     def _buddy_properties_changed(self, tp, handle, properties):
         buddy = self._handles_buddies[tp].get(handle)

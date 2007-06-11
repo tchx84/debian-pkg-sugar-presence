@@ -601,29 +601,24 @@ class Buddy(ExportedGObject):
         except AttributeError:
             self._valid = False
 
-    def update_avatar(self, tp, new_avatar_token):
+    def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
         conn = tp.get_connection()
         handle, identifier = self._handles[tp]
 
-        icon = buddy_icon_cache.get_icon(conn.object_path, identifier,
-                                         new_avatar_token)
-        if not icon:
-            # cache miss
-            def got_avatar(avatar, mime_type):
-                icon = str(icon)
-                buddy_icon_cache.store_icon(conn.object_path, identifier,
-                                            new_avatar_token, icon)
-                if self._icon != icon:
-                    self._icon = icon
-                    self.IconChanged(self._icon)
+        if icon is None:
+            icon = buddy_icon_cache.get_icon(conn.object_path, identifier,
+                                             new_avatar_token)
+        else:
+            buddy_icon_cache.store_icon(conn.object_path, identifier,
+                                        new_avatar_token, icon)
 
-            conn[CONN_INTERFACE_AVATARS].RequestAvatar(handle,
-                    reply_handler=got_avatar,
-                    error_handler=lambda e:
-                        _logger.warning('Error getting avatar for %r: %s',
-                                        self, e),
-                    byte_arrays=True)
+        if icon is None:
+            # this was AvatarUpdated not AvatarRetrieved, and then we got a
+            # cache miss - request an AvatarRetrieved signal so we can get the
+            # actual icon
+            conn[CONN_INTERFACE_AVATARS].RequestAvatars([handle],
+                                                        ignore_reply=True)
         else:
             if self._icon != icon:
                 self._icon = icon
@@ -831,7 +826,7 @@ class GenericOwner(Buddy):
         """Customisation point: handle the registration of the owner"""
         raise RuntimeError("Subclasses must implement")
 
-    def update_avatar(self, tp, new_avatar_token):
+    def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         # This should never get called because Owner avatar changes are
         # driven by the Sugar shell, but just in case:
         _logger.warning('GenericOwner.update_avatar() should not be called')
