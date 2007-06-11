@@ -170,6 +170,9 @@ class PresenceService(ExportedGObject):
                     'ActivityPropertiesChanged',
                     activity_properties_changed)
             self._conn_matches[conn].append(m)
+        else:
+            _logger.warning('Connection %s does not support OLPC activity '
+                            'properties', conn.object_path)
 
         if CONN_INTERFACE_BUDDY_INFO in conn:
             def buddy_activities_changed(contact, activities):
@@ -195,6 +198,9 @@ class PresenceService(ExportedGObject):
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'CurrentActivityChanged', buddy_curact_changed)
             self._conn_matches[conn].append(m)
+        else:
+            _logger.warning('Connection %s does not support OLPC buddy info',
+                            conn.object_path)
 
         if CONN_INTERFACE_AVATARS in conn:
             def avatar_updated(contact, avatar_token):
@@ -202,6 +208,9 @@ class PresenceService(ExportedGObject):
             m = conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
                     avatar_updated)
             self._conn_matches[conn].append(m)
+        else:
+            _logger.warning('Connection %s does not support avatars',
+                            conn.object_path)
 
         if CONN_INTERFACE_ALIASING in conn:
             def aliases_changed(aliases):
@@ -211,6 +220,9 @@ class PresenceService(ExportedGObject):
             m = conn[CONN_INTERFACE_ALIASING].connect_to_signal(
                     'AliasesChanged', aliases_changed)
             self._conn_matches[conn].append(m)
+        else:
+            _logger.warning('Connection %s does not support aliasing',
+                            conn.object_path)
 
     def _tp_disconnected(self, tp):
         if tp.self_handle is not None:
