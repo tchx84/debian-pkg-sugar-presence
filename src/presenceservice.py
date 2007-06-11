@@ -237,8 +237,9 @@ class PresenceService(ExportedGObject):
             del self._conn_matches[conn]
         except KeyError:
             pass
-        for match in matches:
-            match.remove()
+        if matches is not None:
+            for match in matches:
+                match.remove()
 
     def get_buddy(self, objid):
         buddy = self._buddies.get(objid)
