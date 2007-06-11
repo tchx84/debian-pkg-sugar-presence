@@ -84,13 +84,6 @@ class ServerPlugin(gobject.GObject):
             # Connection status changed.
             # args: status, reason as for Telepathy StatusChanged
             (gobject.SIGNAL_RUN_FIRST, None, [int, int]),
-        'buddy-properties-changed':
-            # OLPC buddy properties changed; as for PropertiesChanged
-            # args:
-            #   contact handle: int
-            #   properties: dict {name: str => property: object}
-            # FIXME: are these all the properties or just those that changed?
-            (gobject.SIGNAL_RUN_FIRST, None, [object, object]),
         'activity-invitation':
             # We were invited to join an activity
             # args:
@@ -328,18 +321,6 @@ class ServerPlugin(gobject.GObject):
             _logger.debug('OLPC information not available')
             return False
 
-        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
-                'PropertiesChanged', self._buddy_properties_changed_cb)
-        self._matches.append(m)
-        m = self._conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
-                'CurrentActivityChanged',
-                self._buddy_current_activity_changed_cb)
-        self._matches.append(m)
-
-        self._conn[CONN_INTERFACE_ALIASING].connect_to_signal('AliasesChanged',
-                self._alias_changed_cb)
-        self._matches.append(m)
-
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
         return True
@@ -541,42 +522,6 @@ class ServerPlugin(gobject.GObject):
         self._contacts_online(now_online)
         for handle in now_offline:
             self._contact_offline(handle)
-
-    def _alias_changed_cb(self, aliases):
-        """Handle update of aliases for all users"""
-        for handle, alias in aliases:
-            prop = {'nick': alias}
-            #print "Buddy %s alias changed to %s" % (handle, alias)
-            if (self._online_contacts.has_key(handle) and
-                    self._online_contacts[handle]):
-                self._buddy_properties_changed_cb(handle, prop)
-
-    def _buddy_properties_changed_cb(self, handle, properties):
-        """Handle update of given user (handle)'s properties"""
-        if handle == self._conn[CONN_INTERFACE].GetSelfHandle():
-            # ignore network events for Owner property changes since those
-            # are handled locally
-            return
-        if (self._online_contacts.has_key(handle) and
-                self._online_contacts[handle]):
-            self.emit("buddy-properties-changed", handle, properties)
-
-    def _buddy_current_activity_changed_cb(self, handle, activity, channel):
-        """Handle update of given user (handle)'s current activity"""
-
-        if handle == self._conn[CONN_INTERFACE].GetSelfHandle():
-            # ignore network events for Owner current activity changes since
-            # those are handled locally
-            return
-        if (not self._online_contacts.has_key(handle) or
-                not self._online_contacts[handle]):
-            return
-
-        if not len(activity) or not util.validate_activity_id(activity):
-            activity = None
-        prop = {'current-activity': activity}
-        _logger.debug("Handle %s: current activity now %s", handle, activity)
-        self._buddy_properties_changed_cb(handle, prop)
 
     def _new_channel_cb(self, object_path, channel_type, handle_type, handle,
                         suppress_handler):
