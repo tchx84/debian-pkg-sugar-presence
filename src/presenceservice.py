@@ -327,6 +327,7 @@ class PresenceService(ExportedGObject):
                 del self._activities_by_handle[tp][room]
             except KeyError:
                 pass
+            return None
 
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
