@@ -112,8 +112,8 @@ class Buddy(ExportedGObject):
 
         _activities -- dictionary mapping activity ID to
             activity.Activity objects
-        handles -- dictionary mapping Telepathy client plugin to
-            contact handle (an integer representing the JID or unique ID);
+        _handles -- dictionary mapping Telepathy client plugin to
+            tuples (contact handle, corresponding unique ID);
             channel-specific handles do not appear here
     """
 
@@ -169,7 +169,8 @@ class Buddy(ExportedGObject):
         #: activity ID -> activity
         self._activities = {}
         self._activity_sigids = {}
-        self.handles = {} # tp client -> handle
+        #: Telepathy plugin -> (handle, identifier e.g. JID)
+        self._handles = {}
 
         self._valid = False
         self._owner = False
@@ -288,11 +289,11 @@ class Buddy(ExportedGObject):
             full set of properties, just the changes.
         """
 
-    def add_telepathy_handle(self, tp_client, handle):
+    def add_telepathy_handle(self, tp_client, handle, uid):
         """Add a Telepathy handle."""
         conn = tp_client.get_connection()
+        self._handles[tp_client] = (handle, uid)
         self.TelepathyHandleAdded(conn.service_name, conn.object_path, handle)
-        self.handles[tp_client] = handle
 
     @dbus.service.signal(_BUDDY_INTERFACE, signature='sou')
     def TelepathyHandleAdded(self, tp_conn_name, tp_conn_path, handle):
@@ -308,21 +309,19 @@ class Buddy(ExportedGObject):
             newly associated with the buddy
         """
 
-    def remove_telepathy_handle(self, tp_client, handle):
+    def remove_telepathy_handle(self, tp_client):
         """Remove a Telepathy handle."""
         conn = tp_client.get_connection()
-        my_handle = self.handles.get(tp_client, 0)
-        if my_handle == handle:
-            del self.handles[tp_client]
-            self.TelepathyHandleRemoved(conn.service_name, conn.object_path,
-                                        handle)
-            # the Owner can't disappear - that would be silly
-            if not self.handles and not self._owner:
-                self.emit('disappeared')
-        else:
-            _logger.debug('Telepathy handle %u supposedly removed, but '
-                          'my handle on that connection is %u - ignoring',
-                          handle, my_handle)
+        try:
+            handle, identifier = self._handles.pop(tp_client)
+        except KeyError:
+            return
+
+        self.TelepathyHandleRemoved(conn.service_name, conn.object_path,
+                                    handle)
+        # the Owner can't disappear - that would be silly
+        if not self._handles and not self._owner:
+            self.emit('disappeared')
 
     @dbus.service.signal(_BUDDY_INTERFACE, signature='sou')
     def TelepathyHandleRemoved(self, tp_conn_name, tp_conn_path, handle):
@@ -401,10 +400,10 @@ class Buddy(ExportedGObject):
             object path, handle).
         """
         ret = []
-        for plugin in self.handles:
+        for plugin in self._handles:
             conn = plugin.get_connection()
             ret.append((str(conn.service_name), conn.object_path,
-                        self.handles[plugin]))
+                        self._handles[plugin][0]))
 
     # methods
     def object_path(self):
@@ -633,7 +632,7 @@ class GenericOwner(Buddy):
                     _logger.warning("setting current activity failed: %s", e))
 
     def _set_self_alias(self, tp):
-        self_handle = self.handles[tp]
+        self_handle = self._handles[tp][0]
         conn = tp.get_connection()
         conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
                 reply_handler=_noop,
@@ -654,8 +653,8 @@ class GenericOwner(Buddy):
         # Hack so we can use this as a timeout handler
         return False
 
-    def add_telepathy_handle(self, tp_client, handle):
-        Buddy.add_telepathy_handle(self, tp_client, handle)
+    def add_telepathy_handle(self, tp_client, handle, uid):
+        Buddy.add_telepathy_handle(self, tp_client, handle, uid)
 
         self._set_self_olpc_properties(tp_client)
         self._set_self_alias(tp_client)
@@ -671,7 +670,7 @@ class GenericOwner(Buddy):
         # As well as emitting the D-Bus signal, prod the Telepathy
         # connection manager
         Buddy.IconChanged(self, icon_data)
-        for tp in self.handles.iterkeys():
+        for tp in self._handles.iterkeys():
             self._set_self_avatar(tp)
 
     def _set_self_avatar(self, tp):
@@ -682,7 +681,7 @@ class GenericOwner(Buddy):
         m.update(icon_data)
         digest = m.hexdigest()
 
-        self_handle = self.handles[tp]
+        self_handle = self._handles[tp][0]
         token = conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
                 [self_handle])[0]
 
@@ -708,7 +707,7 @@ class GenericOwner(Buddy):
                     _logger.warning('Error setting avatar: %s', e))
 
     def _property_changed(self, changed_props):
-        for tp in self.handles.iterkeys():
+        for tp in self._handles.iterkeys():
 
             if changed_props.has_key("current-activity"):
                 self._set_self_current_activity(tp)

@@ -73,8 +73,9 @@ class ServerPlugin(gobject.GObject):
             # args:
             #   contact identification (based on key ID or JID): str
             #   contact handle: int or long
+            #   contact identifier (JID): str or unicode
             #   dict {name: str => property: object}
-            (gobject.SIGNAL_RUN_FIRST, None, [str, object, object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [str, object, object, object]),
         'contact-offline':
             # Contact has gone offline.
             # args: contact handle
@@ -131,6 +132,7 @@ class ServerPlugin(gobject.GObject):
 
         self._owner = owner
         self.self_handle = None
+        self.self_identifier = None
 
         self._account = self._get_account_info()
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
@@ -314,10 +316,14 @@ class ServerPlugin(gobject.GObject):
 
         if local_pending:
             # accept pending subscriptions
+            # FIXME: do this async
             publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
 
+        # FIXME: do this async?
         self.self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
-        self._online_contacts[self.self_handle] = self._account['account']
+        self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
+                HANDLE_TYPE_CONTACT, self.self_handle)[0]
+        self._online_contacts[self.self_handle] = self.self_identifier
 
         # request subscriptions from people subscribed to us if we're not
         # subscribed to them
@@ -470,7 +476,7 @@ class ServerPlugin(gobject.GObject):
         self._online_contacts[handle] = jid
         objid = self.identify_contacts(None, [handle])[handle]
 
-        self.emit("contact-online", objid, handle, props)
+        self.emit("contact-online", objid, handle, jid, props)
 
     def _contact_online_aliases_error_cb(self, handle, props, retry, err):
         """Handle failure to retrieve given user's alias/information"""

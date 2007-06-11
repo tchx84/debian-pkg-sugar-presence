@@ -158,7 +158,8 @@ class PresenceService(ExportedGObject):
 
     def _tp_connected(self, tp):
         self._handles_buddies[tp][tp.self_handle] = self._owner
-        self._owner.add_telepathy_handle(tp, tp.self_handle)
+        self._owner.add_telepathy_handle(tp, tp.self_handle,
+                                         tp.self_identifier)
 
         conn = tp.get_connection()
 
@@ -181,7 +182,7 @@ class PresenceService(ExportedGObject):
         if tp.self_handle is not None:
             self._handles_buddies.setdefault(tp, {}).pop(
                     tp.self_handle, None)
-            self._owner.remove_telepathy_handle(tp, tp.self_handle)
+        self._owner.remove_telepathy_handle(tp)
 
         conn = tp.get_connection()
 
@@ -204,13 +205,13 @@ class PresenceService(ExportedGObject):
             self._buddies[objid] = buddy
         return buddy
 
-    def _contact_online(self, tp, objid, handle, props):
+    def _contact_online(self, tp, objid, handle, identifier, props):
         _logger.debug('Handle %u, .../%s is now online', handle, objid)
         buddy = self.get_buddy(objid)
 
         self._handles_buddies[tp][handle] = buddy
         # store the handle of the buddy for this CM
-        buddy.add_telepathy_handle(tp, handle)
+        buddy.add_telepathy_handle(tp, handle, identifier)
         buddy.set_properties(props)
 
         # kick off a request for their current activities
@@ -241,14 +242,12 @@ class PresenceService(ExportedGObject):
             self._buddy_validity_changed_cb(buddy, False)
 
     def _contact_offline(self, tp, handle):
-        if not self._handles_buddies[tp].has_key(handle):
-            return
-
-        buddy = self._handles_buddies[tp].pop(handle)
+        buddy = self._handles_buddies[tp].pop(handle, None)
         # the handle of the buddy for this CM is not valid anymore
         # (this might trigger _buddy_disappeared_cb if they are not visible
         # via any CM)
-        buddy.remove_telepathy_handle(tp, handle)
+        if buddy is not None:
+            buddy.remove_telepathy_handle(tp)
 
     def _get_next_object_id(self):
         """Increment and return the object ID counter."""
