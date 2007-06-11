@@ -349,7 +349,7 @@ class Activity(ExportedGObject):
                         unsuccessful
 
         """
-        self.join(lambda unused: async_cb(), async_err_cb, False)
+        self.join(async_cb, async_err_cb, False)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="ao")
@@ -549,7 +549,7 @@ class Activity(ExportedGObject):
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
-            self._join_cb(self)
+            self._join_cb()
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
         except Exception, e:
             self._join_failed_cb(e)
@@ -613,10 +613,10 @@ class Activity(ExportedGObject):
     def join(self, async_cb, async_err_cb, sharing):
         """Local method for the local user to attempt to join the activity.
 
-        async_cb -- Callback method to be called with the Activity as a
-            parameter if join attempt is successful
-        async_err_cb -- Callback method to be called if join attempt is
-                        unsuccessful
+        async_cb -- Callback method to be called with no parameters
+            if join attempt is successful
+        async_err_cb -- Callback method to be called with an Exception
+            parameter if join attempt is unsuccessful
 
         The two callbacks are passed to the server_plugin ("tp") object,
         which in turn passes them back as parameters in a callback to the
