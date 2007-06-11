@@ -365,18 +365,23 @@ class PresenceService(ExportedGObject):
 
         for act in activities_joined:
             room_handle = activities[act]
-            _logger.debug("Handle %s joined activity %s", contact_handle, act)
+            _logger.debug("Handle %s claims to have joined activity %s",
+                          contact_handle, act)
             activity = self._activities_by_id.get(act)
             if activity is None:
                 # new activity, can fail
+                _logger.debug('No activity object for %s, creating one', act)
                 activity = self._new_activity(act, tp, room_handle)
 
-            if activity is not None:
+            if activity is None:
+                _logger.debug('Failed to create activity object for %s', act)
+            else:
                 activity.buddy_apparently_joined(buddy)
 
         activities_left = old_activities - new_activities
         for act in activities_left:
-            _logger.debug("Handle %s left activity %s", contact_handle, act)
+            _logger.debug("Handle %s claims to have left activity %s",
+                          contact_handle, act)
             activity = self._activities_by_id.get(act)
             if activity is None:
                 # don't bother creating an Activity just so someone can leave

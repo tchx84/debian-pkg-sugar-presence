@@ -430,7 +430,12 @@ class Activity(ExportedGObject):
         This method is called by the PresenceService on the local machine.
 
         """
-        if not self._joined:
+        if self._joined:
+            _logger.debug("Ignoring alleged join to activity %s that I'm in: "
+                          "I can already see who's there", self._id)
+        else:
+            _logger.debug("%s says they joined activity %s that I'm not in",
+                          buddy.props.objid, self._id)
             self._add_buddies((buddy,))
 
     def _add_buddies(self, buddies):
