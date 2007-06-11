@@ -144,6 +144,8 @@ class Activity(ExportedGObject):
         self._self_handle = None
         self._text_channel = None
         self._text_channel_group_flags = 0
+        #: list of SignalMatch associated with the text channel, or None
+        self._text_channel_matches = None
 
         self._valid = False
         self._id = None
@@ -471,6 +473,13 @@ class Activity(ExportedGObject):
         self._text_channel_group_flags |= added
         self._text_channel_group_flags &= ~removed
 
+    def _clean_up_matches(self):
+        matches = self._text_channel_matches
+        self._text_channel_matches = []
+        if matches is not None:
+            for match in matches:
+                match.remove()
+
     def _handle_share_join(self, text_channel):
         """Called when a join to a network activity was successful.
 
@@ -482,22 +491,27 @@ class Activity(ExportedGObject):
             raise RuntimeError("Plugin returned invalid text channel")
 
         self._text_channel = text_channel
-        self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
+        self._clean_up_matches()
+
+        m = self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
                 self._text_channel_closed_cb)
+        self._text_channel_matches.append(m)
         if CHANNEL_INTERFACE_GROUP in self._text_channel:
             group = self._text_channel[CHANNEL_INTERFACE_GROUP]
 
             # FIXME: make these method calls async?
 
-            group.connect_to_signal('GroupFlagsChanged',
-                                    self._text_channel_group_flags_changed_cb)
+            m = group.connect_to_signal('GroupFlagsChanged',
+                    self._text_channel_group_flags_changed_cb)
+            self._text_channel_matches.append(m)
             self._text_channel_group_flags = group.GetGroupFlags()
 
             self._self_handle = group.GetSelfHandle()
 
             # by the time we hook this, we need to know the group flags
-            group.connect_to_signal('MembersChanged',
-                                    self._text_channel_members_changed_cb)
+            m = group.connect_to_signal('MembersChanged',
+                                        self._text_channel_members_changed_cb)
+            self._text_channel_matches.append(m)
             # bootstrap by getting the current state. This is where we find
             # out whether anyone was lying to us in their PEP info
             members = set(group.GetMembers())
