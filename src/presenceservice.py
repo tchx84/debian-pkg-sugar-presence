@@ -163,20 +163,21 @@ class PresenceService(ExportedGObject):
 
         self._conn_matches[conn] = []
 
-        def activity_properties_changed(room, properties):
-            self._activity_properties_changed(tp, room, properties)
-        m = conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].connect_to_signal(
-                'ActivityPropertiesChanged',
-                activity_properties_changed)
-        self._conn_matches[conn].append(m)
-
-        def buddy_activities_changed(contact, activities):
-            self._buddy_activities_changed(tp, contact, activities)
-        m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
-                'ActivitiesChanged', buddy_activities_changed)
-        self._conn_matches[conn].append(m)
+        if CONN_INTERFACE_ACTIVITY_PROPERTIES in conn:
+            def activity_properties_changed(room, properties):
+                self._activity_properties_changed(tp, room, properties)
+            m = conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].connect_to_signal(
+                    'ActivityPropertiesChanged',
+                    activity_properties_changed)
+            self._conn_matches[conn].append(m)
 
         if CONN_INTERFACE_BUDDY_INFO in conn:
+            def buddy_activities_changed(contact, activities):
+                self._buddy_activities_changed(tp, contact, activities)
+            m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
+                    'ActivitiesChanged', buddy_activities_changed)
+            self._conn_matches[conn].append(m)
+
             def buddy_properties_changed(contact, properties):
                 self._buddy_properties_changed(tp, contact, properties)
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
@@ -195,11 +196,12 @@ class PresenceService(ExportedGObject):
                 'CurrentActivityChanged', buddy_curact_changed)
             self._conn_matches[conn].append(m)
 
-        def avatar_updated(contact, avatar_token):
-            self._avatar_updated(tp, contact, avatar_token)
-        m = conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
-                avatar_updated)
-        self._conn_matches[conn].append(m)
+        if CONN_INTERFACE_AVATARS in conn:
+            def avatar_updated(contact, avatar_token):
+                self._avatar_updated(tp, contact, avatar_token)
+            m = conn[CONN_INTERFACE_AVATARS].connect_to_signal('AvatarUpdated',
+                    avatar_updated)
+            self._conn_matches[conn].append(m)
 
         if CONN_INTERFACE_ALIASING in conn:
             def aliases_changed(aliases):
