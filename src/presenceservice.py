@@ -211,18 +211,19 @@ class PresenceService(ExportedGObject):
             self._buddies[objid] = buddy
         return buddy
 
-    def _contact_online(self, tp, objid, handle, identifier, props):
+    def _contact_online(self, tp, objid, handle, identifier):
         _logger.debug('Handle %u, .../%s is now online', handle, objid)
         buddy = self.get_buddy(objid)
 
         self._handles_buddies[tp][handle] = buddy
         # store the handle of the buddy for this CM
         buddy.add_telepathy_handle(tp, handle, identifier)
-        buddy.set_properties(props)
 
-        # kick off a request for their current activities
-        # FIXME: move this to the Buddy?
         conn = tp.get_connection()
+
+        # Kick off a request for their current activities. This isn't done
+        # internally by the Buddy itself, because when we get the activities
+        # back, we actually want to feed them to the Activity objects.
 
         def got_activities(activities):
             self._buddy_activities_changed(tp, handle, activities)

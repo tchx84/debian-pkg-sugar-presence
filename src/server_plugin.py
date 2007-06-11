@@ -20,6 +20,7 @@
 import logging
 import os
 import sys
+from itertools import izip
 from string import hexdigits
 
 # Other libraries
@@ -452,87 +453,15 @@ class ServerPlugin(gobject.GObject):
             self.emit("contact-offline", handle)
         del self._online_contacts[handle]
 
-    def _contact_online_aliases_cb(self, handle, props, aliases):
-        """Handle contact's alias being received (do further queries)"""
-        if not self._conn or not aliases or not len(aliases):
-            _logger.debug("Handle %s - No aliases", handle)
-            self._contact_offline(handle)
-            return
-
-        props['nick'] = aliases[0]
-
-        jid = self._conn[CONN_INTERFACE].InspectHandles(HANDLE_TYPE_CONTACT,
-                                                        [handle])[0]
-        self._online_contacts[handle] = jid
-        objid = self.identify_contacts(None, [handle])[handle]
-
-        self.emit("contact-online", objid, handle, jid, props)
-
-    def _contact_online_aliases_error_cb(self, handle, props, retry, err):
-        """Handle failure to retrieve given user's alias/information"""
-        if retry:
-            _logger.debug("Handle %s - Error getting nickname (will retry):"
-                          "%s", handle, err)
-            self._conn[CONN_INTERFACE_ALIASING].RequestAliases([handle],
-                reply_handler=lambda *args: self._contact_online_aliases_cb(
-                    handle, props, *args),
-                error_handler=lambda e: self._contact_online_aliases_error_cb(
-                    handle, props, False, e))
-        else:
-            _logger.debug("Handle %s - Error getting nickname: %s",
-                          handle, err)
-            self._contact_offline(handle)
-
-    def _contact_online_properties_cb(self, handle, props):
-        """Handle failure to retrieve given user's alias/information"""
-        if not props.has_key('key'):
-            _logger.debug("Handle %s - invalid key.", handle)
-            self._contact_offline(handle)
-            return
-        if not props.has_key('color'):
-            _logger.debug("Handle %s - invalid color.", handle)
-            self._contact_offline(handle)
-            return
-
-        self._conn[CONN_INTERFACE_ALIASING].RequestAliases([handle],
-            reply_handler=lambda *args: self._contact_online_aliases_cb(
-                handle, props, *args),
-            error_handler=lambda e: self._contact_online_aliases_error_cb(
-                handle, props, True, e))
-
-    def _contact_online_request_properties(self, handle, tries):
-        self._conn[CONN_INTERFACE_BUDDY_INFO].GetProperties(handle,
-            byte_arrays=True,
-            reply_handler=lambda *args: self._contact_online_properties_cb(
-                handle, *args),
-            error_handler=lambda e: self._contact_online_properties_error_cb(
-                handle, tries, e))
-        return False
-
-    def _contact_online_properties_error_cb(self, handle, tries, err):
-        """Handle error retrieving property-set for a user (handle)"""
-        if tries <= 3:
-            _logger.debug("Handle %s - Error getting properties (will retry):"
-                          " %s", handle, err)
-            tries += 1
-            gobject.timeout_add(1000, self._contact_online_request_properties,
-                                handle, tries)
-        else:
-            _logger.debug("Handle %s - Error getting properties: %s",
-                          handle, err)
-            self._contact_offline(handle)
-
     def _contacts_online(self, handles):
         """Handle contacts coming online"""
         relevant = []
 
         for handle in handles:
             if handle == self.self_handle:
-                jid = self._conn[CONN_INTERFACE].InspectHandles(
-                        HANDLE_TYPE_CONTACT, [handle])[0]
-                self._online_contacts[handle] = jid
                 # ignore network events for Owner property changes since those
                 # are handled locally
+                pass
             elif (handle in self._subscribe_members or
                   handle in self._subscribe_local_pending or
                   handle in self._subscribe_remote_pending):
@@ -540,9 +469,14 @@ class ServerPlugin(gobject.GObject):
             # else it's probably a channel-specific handle - can't create a
             # Buddy object for those yet
 
-        for handle in relevant:
-            self._online_contacts[handle] = None
-            self._contact_online_request_properties(handle, 1)
+        jids = self._conn[CONN_INTERFACE].InspectHandles(
+                HANDLE_TYPE_CONTACT, relevant)
+
+        objids = self.identify_contacts(None, relevant, jids)
+
+        for handle, jid, objid in izip(relevant, jids, objids):
+            self._online_contacts[handle] = jid
+            self.emit('contact-online', objid, handle, jid)
 
     def _subscribe_members_changed_cb(self, message, added, removed,
                                       local_pending, remote_pending,
@@ -689,7 +623,7 @@ class ServerPlugin(gobject.GObject):
         """
         return (hostname == 'olpc.collabora.co.uk')
 
-    def identify_contacts(self, tp_chan, handles):
+    def identify_contacts(self, tp_chan, handles, identifiers=None):
         """Work out the "best" unique identifier we can for the given handles,
         in the context of the given channel (which may be None), using only
         'fast' connection manager API (that does not involve network
@@ -732,6 +666,7 @@ class ServerPlugin(gobject.GObject):
             group = tp_chan[CHANNEL_INTERFACE_GROUP]
             if (group.GetGroupFlags() &
                 CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES):
+                identifiers = None
                 owners = group.GetHandleOwners(handles)
                 for i, owner in enumerate(owners):
                     if owner == 0:
@@ -739,11 +674,12 @@ class ServerPlugin(gobject.GObject):
         else:
             group = None
 
-        jids = self._conn[CONN_INTERFACE].InspectHandles(HANDLE_TYPE_CONTACT,
-                                                         owners)
+        if identifiers is None:
+            identifiers = self._conn[CONN_INTERFACE].InspectHandles(
+                HANDLE_TYPE_CONTACT, identifiers)
 
         ret = {}
-        for handle, jid in zip(handles, jids):
+        for handle, jid in izip(handles, identifiers):
             # special-case the Owner - we always know who we are
             if (handle == self.self_handle or
                 (group is not None and handle == group.GetSelfHandle())):
