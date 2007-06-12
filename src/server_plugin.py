@@ -57,7 +57,11 @@ class ServerPlugin(TelepathyPlugin):
 
         # Monitor IPv4 address as an indicator of the network connection
         self._ip4am = psutils.IP4AddressMonitor.get_instance()
-        self._ip4am.connect('address-changed', self._ip4_address_changed_cb)
+        self._ip4am_sigid = self._ip4am.connect('address-changed', self._ip4_address_changed_cb)
+
+    def cleanup(self):
+        TelepathyPlugin.cleanup(self)
+        self._ip4am.disconnect(self._ip4am_sigid)
 
     def _ip4_address_changed_cb(self, ip4am, address):
         _logger.debug("::: IP4 address now %s", address)
@@ -69,7 +73,7 @@ class ServerPlugin(TelepathyPlugin):
                 self.start()
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
-            self.cleanup()
+            self.stop()
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
@@ -220,3 +224,38 @@ class ServerPlugin(TelepathyPlugin):
                     ret[handle] = 'xmpp/' + psutils.escape_identifier(jid)
 
         return ret
+
+    def _connected_cb(self):
+        TelepathyPlugin._connected_cb(self)
+
+        publish_handles, local_pending, remote_pending = \
+                self._publish_channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
+
+        if local_pending:
+            # accept pending subscriptions
+            # FIXME: do this async
+            publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
+
+        # request subscriptions from people subscribed to us if we're not
+        # subscribed to them
+        not_subscribed = set(publish_handles)
+        not_subscribed -= self._subscribe_members
+        subscribe[CHANNEL_INTERFACE_GROUP].AddMembers(not_subscribed, '')
+
+    def _publish_members_changed_cb(self, message, added, removed,
+                                    local_pending, remote_pending,
+                                    actor, reason):
+        TelepathyPlugin._publish_members_changed_cb()
+
+        if local_pending:
+            # accept all requested subscriptions
+            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                    local_pending, '')
+
+        # subscribe to people who've subscribed to us, if necessary
+        if self._subscribe_channel is not None:
+            added = list(set(added) - self._subscribe_members
+                         - self._subscribe_remote_pending)
+            if added:
+                self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                        added, '')

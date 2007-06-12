@@ -68,6 +68,9 @@ class TestOwner(GenericOwner):
                 key=pubkey, nick=nick, color=color, icon=icon,
                 registered=registered, key_hash=privkey_hash)
 
+        # we already know our own nick, color, key
+        self._awaiting = None
+
         # Only do the random stuff if randomize is true
         if randomize:
             self._ps.connect('connection-status', self._ps_connection_status_cb)

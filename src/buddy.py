@@ -121,7 +121,8 @@ class Buddy(ExportedGObject):
         'validity-changed':
             # The buddy's validity changed.
             # Validity starts off False, and becomes True when the buddy
-            # has a color, a nick and a key.
+            # either has, or has tried and failed to get, a color, a nick
+            # and a key.
             # * the new validity: bool
             (gobject.SIGNAL_RUN_FIRST, None, [bool]),
         'property-changed':
@@ -140,15 +141,25 @@ class Buddy(ExportedGObject):
     }
 
     __gproperties__ = {
-        _PROP_KEY          : (str, None, None, None, gobject.PARAM_READWRITE),
-        _PROP_ICON         : (object, None, None, gobject.PARAM_READWRITE),
-        _PROP_NICK         : (str, None, None, None, gobject.PARAM_READWRITE),
-        _PROP_COLOR        : (str, None, None, None, gobject.PARAM_READWRITE),
-        _PROP_CURACT       : (str, None, None, None, gobject.PARAM_READWRITE),
+        _PROP_KEY          : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE),
+        _PROP_ICON         : (object, None, None, gobject.PARAM_READABLE),
+        _PROP_NICK         : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE),
+        _PROP_COLOR        : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE),
+        _PROP_CURACT       : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE),
         _PROP_VALID        : (bool, None, None, False, gobject.PARAM_READABLE),
         _PROP_OWNER        : (bool, None, None, False, gobject.PARAM_READABLE),
         _PROP_OBJID        : (str, None, None, None, gobject.PARAM_READABLE),
-        _PROP_IP4_ADDRESS  : (str, None, None, None, gobject.PARAM_READWRITE)
+        _PROP_IP4_ADDRESS  : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE)
     }
 
     def __init__(self, bus, object_id, **kwargs):
@@ -172,7 +183,7 @@ class Buddy(ExportedGObject):
         #: Telepathy plugin -> (handle, identifier e.g. JID)
         self._handles = {}
 
-        self._valid = False
+        self._awaiting = set(('alias', 'properties'))
         self._owner = False
         self._key = None
         self._icon = ''
@@ -198,8 +209,9 @@ class Buddy(ExportedGObject):
         ExportedGObject.__init__(self, bus, self._object_path,
                                  gobject_properties=kwargs)
 
-        if icon_data:
-            self.props.icon = icon_data
+        if icon_data is not None:
+            self._icon = str(icon_data)
+            self.IconChanged(self._icon)
 
     def do_get_property(self, pspec):
         """Retrieve current value for the given property specifier
@@ -223,7 +235,7 @@ class Buddy(ExportedGObject):
                 return None
             return self._current_activity
         elif pspec.name == _PROP_VALID:
-            return self._valid
+            return not self._awaiting
         elif pspec.name == _PROP_OWNER:
             return self._owner
         elif pspec.name == _PROP_IP4_ADDRESS:
@@ -236,7 +248,6 @@ class Buddy(ExportedGObject):
         value -- value to set
 
         emits 'icon-changed' signal on icon setting
-        calls _update_validity on all calls
         """
         if pspec.name == _PROP_ICON:
             if str(value) != self._icon:
@@ -254,8 +265,6 @@ class Buddy(ExportedGObject):
             self._key = value
         elif pspec.name == _PROP_IP4_ADDRESS:
             self._ip4_address = value
-
-        self._update_validity()
 
     # dbus signals
     @dbus.service.signal(_BUDDY_INTERFACE,
@@ -373,10 +382,10 @@ class Buddy(ExportedGObject):
                 "" if no current activity
         """
         props = {}
-        props[_PROP_NICK] = self.props.nick
-        props[_PROP_OWNER] = self.props.owner
-        props[_PROP_KEY] = self.props.key
-        props[_PROP_COLOR] = self.props.color
+        props[_PROP_NICK] = self.props.nick or ''
+        props[_PROP_OWNER] = self.props.owner or ''
+        props[_PROP_KEY] = self.props.key or ''
+        props[_PROP_COLOR] = self.props.color or ''
 
         if self.props.ip4_address:
             props[_PROP_IP4_ADDRESS] = self.props.ip4_address
@@ -464,8 +473,7 @@ class Buddy(ExportedGObject):
         properties -- set of property values to set
 
         if no change, no events generated
-        if change, generates property-changed and
-            calls _update_validity
+        if change, generates property-changed
         """
         changed = False
         changed_props = {}
@@ -508,7 +516,7 @@ class Buddy(ExportedGObject):
         # Try emitting PropertyChanged before updating validity
         # to avoid leaking a PropertyChanged signal before the buddy is
         # actually valid the first time after creation
-        if self._valid:
+        if not self._awaiting:
             dbus_changed = {}
             for key, value in changed_props.items():
                 if value:
@@ -519,29 +527,35 @@ class Buddy(ExportedGObject):
 
             self._property_changed(changed_props)
 
-        self._update_validity()
-
     def _property_changed(self, changed_props):
         pass
 
-    def _update_validity(self):
-        """Check whether we are now valid
+    def update_buddy_properties(self, tp, props):
+        """Update the buddy properties (those that come from the GetProperties
+        method of the org.laptop.Telepathy.BuddyInfo interface) from the
+        given Telepathy connection.
 
-        validity is True if color, nick and key are non-null
-
-        emits validity-changed if we have changed validity
+        Other properties, such as 'nick', may not be set via this method.
         """
-        try:
-            old_valid = self._valid
-            if self._color and self._nick and self._key:
-                self._valid = True
-            else:
-                self._valid = False
+        self.set_properties(props)
+        # If the properties didn't contain the key or color, then we're never
+        # going to get one.
+        self._awaiting.discard('properties')
+        if not self._awaiting:
+            self.emit('validity-changed', True)
 
-            if old_valid != self._valid:
-                self.emit("validity-changed", self._valid)
-        except AttributeError:
-            self._valid = False
+    def update_alias(self, tp, alias):
+        """Update the alias from the given Telepathy connection.
+        """
+        self.set_properties({'nick': alias})
+        self._awaiting.discard('alias')
+        if not self._awaiting:
+            self.emit('validity-changed', True)
+
+    def update_current_activity(self, tp, current_activity):
+        """Update the current activity from the given Telepathy connection.
+        """
+        self.set_properties({'current-activity': current_activity})
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
@@ -846,6 +860,9 @@ class ShellOwner(GenericOwner):
                 bus_name=self._SHELL_SERVICE,
                 path=self._SHELL_PATH)
 
+        # we already know our own nick, color, key
+        self._awaiting = None
+
     def set_registered(self, value):
         """Handle notification that we have been registered"""
         if value:
@@ -853,7 +870,10 @@ class ShellOwner(GenericOwner):
 
     def _icon_changed_cb(self, icon):
         """Handle icon change, set property to generate event"""
-        self.props.icon = icon
+        icon = str(icon)
+        if icon != self._icon:
+            self._icon = icon
+            self.IconChanged(icon)
 
     def _color_changed_cb(self, color):
         """Handle color change, set property to generate event"""

@@ -102,13 +102,18 @@ class PresenceService(ExportedGObject):
         self._registry.LoadManagers()
 
         # Set up the Telepathy plugins
-        self._server_plugin = ServerPlugin(self._registry, self._owner)
-        self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
         self._plugins = []
         debug_flags = set(environ.get('PRESENCE_SERVICE_DEBUG', '').split(','))
-        if 'disable-gabble' not in debug_flags:
+        _logger.debug('Debug flags: %r', debug_flags)
+        if 'disable-gabble' in debug_flags:
+            self._server_plugin = None
+        else:
+            self._server_plugin = ServerPlugin(self._registry, self._owner)
             self._plugins.append(self._server_plugin)
-        if 'disable-salut' not in debug_flags:
+        if 'disable-salut' in debug_flags:
+            self._ll_plugin = None
+        else:
+            self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
             self._plugins.append(self._ll_plugin)
         self._connected_plugins = set()
 
@@ -178,7 +183,9 @@ class PresenceService(ExportedGObject):
             self._conn_matches[conn].append(m)
 
             def buddy_properties_changed(contact, properties):
-                self._buddy_properties_changed(tp, contact, properties)
+                buddy = self._handles_buddies[tp].get(contact)
+                if buddy is not None and buddy is not self._owner:
+                    buddy.update_buddy_properties(tp, properties)
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'PropertiesChanged', buddy_properties_changed)
             self._conn_matches[conn].append(m)
@@ -188,8 +195,9 @@ class PresenceService(ExportedGObject):
                     room == 0):
                     act_id = ''
                     room = 0
-                self._buddy_properties_changed(tp, contact,
-                                               {'current-activity': act_id})
+                buddy = self._handles_buddies[tp].get(contact)
+                if buddy is not None and buddy is not self._owner:
+                    buddy.update_current_activity(tp, act_id)
                 # FIXME: do something useful with the room handle?
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                 'CurrentActivityChanged', buddy_curact_changed)
@@ -218,8 +226,9 @@ class PresenceService(ExportedGObject):
         if CONN_INTERFACE_ALIASING in conn:
             def aliases_changed(aliases):
                 for contact, alias in aliases:
-                    self._buddy_properties_changed(tp, contact,
-                                                   {'nick': alias})
+                    buddy = self._handles_buddies[tp].get(contact)
+                    if buddy is not None and buddy is not self._owner:
+                        buddy.update_alias(tp, alias)
             m = conn[CONN_INTERFACE_ALIASING].connect_to_signal(
                     'AliasesChanged', aliases_changed)
             self._conn_matches[conn].append(m)
@@ -285,8 +294,9 @@ class PresenceService(ExportedGObject):
             def got_aliases(aliases):
                 gobject.idle_add(self._run_contacts_online_queue)
                 for contact, alias in izip(handles, aliases):
-                    self._buddy_properties_changed(tp, contact,
-                                                   {'nick': alias})
+                    buddy = self._handles_buddies[tp].get(contact)
+                    if buddy is not None and buddy is not self._owner:
+                        buddy.update_alias(tp, alias)
             def request_aliases():
                 try:
                     conn[CONN_INTERFACE_ALIASING].RequestAliases(handles,
@@ -326,7 +336,9 @@ class PresenceService(ExportedGObject):
                 _logger.warning('Error %s: %s', when, e)
             def got_properties(props):
                 gobject.idle_add(self._run_contacts_online_queue)
-                self._buddy_properties_changed(tp, contact, props)
+                buddy = self._handles_buddies[tp].get(contact)
+                if buddy is not None and buddy is not self._owner:
+                    buddy.update_buddy_properties(tp, props)
             def get_properties():
                 try:
                     conn[CONN_INTERFACE_BUDDY_INFO].GetProperties(contact,
@@ -336,11 +348,15 @@ class PresenceService(ExportedGObject):
                 except Exception, e:
                     gobject.idle_add(self._run_contacts_online_queue)
                     handle_error(e, 'fetching buddy properties')
+            def got_current_activity(current_activity, room):
+                gobject.idle_add(self._run_contacts_online_queue)
+                buddy = self._handles_buddies[tp].get(contact)
+                if buddy is not None and buddy is not self._owner:
+                    buddy.update_current_activity(tp, current_activity)
             def get_current_activity():
                 try:
                     conn[CONN_INTERFACE_BUDDY_INFO].GetCurrentActivity(contact,
-                        reply_handler=lambda c, room:
-                            got_properties({'current-activity': c}),
+                        reply_handler=got_current_activity,
                         error_handler=lambda e:
                             handle_error(e, 'fetching current activity'))
                 except Exception, e:
@@ -408,13 +424,6 @@ class PresenceService(ExportedGObject):
         if buddy is not None and buddy is not self._owner:
             _logger.debug("Buddy %s icon updated" % buddy.props.nick)
             buddy.update_avatar(tp, new_avatar_token, avatar, mime_type)
-
-    def _buddy_properties_changed(self, tp, handle, properties):
-        buddy = self._handles_buddies[tp].get(handle)
-        if buddy:
-            buddy.set_properties(properties)
-            _logger.debug("Buddy %s properties updated: %s", buddy.props.nick,
-                          properties.keys())
 
     def _new_activity(self, activity_id, tp, room):
         try:

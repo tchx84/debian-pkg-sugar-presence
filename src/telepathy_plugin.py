@@ -237,7 +237,7 @@ class TelepathyPlugin(gobject.GObject):
             _logger.debug("%r: connected", self)
             self._connected_cb()
         elif status == CONNECTION_STATUS_DISCONNECTED:
-            self.cleanup()
+            self.stop()
             _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
@@ -256,7 +256,7 @@ class TelepathyPlugin(gobject.GObject):
     def _could_connect(self):
         return True
 
-    def cleanup(self):
+    def stop(self):
         """If we still have a connection, disconnect it"""
 
         matches = self._matches
@@ -278,6 +278,9 @@ class TelepathyPlugin(gobject.GObject):
         if self._reconnect_id > 0:
             gobject.source_remove(self._reconnect_id)
             self._reconnect_id = 0
+
+    def cleanup(self):
+        self.stop()
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -340,19 +343,7 @@ class TelepathyPlugin(gobject.GObject):
 
     def _publish_members_changed_cb(self, message, added, removed,
             local_pending, remote_pending, actor, reason):
-
-        if local_pending:
-            # accept all requested subscriptions
-            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
-                    local_pending, '')
-
-        # subscribe to people who've subscribed to us, if necessary
-        if self._subscribe_channel is not None:
-            added = list(set(added) - self._subscribe_members
-                         - self._subscribe_remote_pending)
-            if added:
-                self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
-                        added, '')
+        pass
 
     def _presence_update_cb(self, presence):
         """Send update for online/offline status of presence"""
@@ -420,8 +411,6 @@ class TelepathyPlugin(gobject.GObject):
         m = publish[CHANNEL_INTERFACE_GROUP].connect_to_signal(
                 'MembersChanged', self._publish_members_changed_cb)
         self._matches.append(m)
-        publish_handles, local_pending, remote_pending = \
-                publish[CHANNEL_INTERFACE_GROUP].GetAllMembers()
 
         # the group of contacts for whom you wish to receive presence
         subscribe = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
@@ -436,20 +425,10 @@ class TelepathyPlugin(gobject.GObject):
         self._subscribe_local_pending = set(subscribe_lp)
         self._subscribe_remote_pending = set(subscribe_rp)
 
-        if local_pending:
-            # accept pending subscriptions
-            # FIXME: do this async
-            publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
-
         # FIXME: do this async?
         self.self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
         self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
                 HANDLE_TYPE_CONTACT, [self.self_handle])[0]
-
-        # request subscriptions from people subscribed to us if we're not
-        # subscribed to them
-        not_subscribed = list(set(publish_handles) - set(subscribe_handles))
-        subscribe[CHANNEL_INTERFACE_GROUP].AddMembers(not_subscribed, '')
 
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)

@@ -76,7 +76,13 @@ class LinkLocalPlugin(TelepathyPlugin):
             if had_avahi:
                 _logger.info('Avahi disappeared from the system bus - '
                              'stopping...')
-                self.cleanup()
+                self.stop()
+
+    def cleanup(self):
+        TelepathyPlugin.cleanup(self)
+        if self._watch is not None:
+            self._watch.cancel()
+        self._watch = None
 
     def _could_connect(self):
         return self._have_avahi
