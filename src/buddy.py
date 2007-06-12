@@ -667,12 +667,22 @@ class GenericOwner(Buddy):
     def _set_self_olpc_properties(self, tp):
         conn = tp.get_connection()
         # FIXME: omit color/key/ip4-address if None?
-        conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(
-                {'color': self._color or '', 'key': self._key or '',
-                 'ip4-address': self._ip4_address or '' },
+
+        props = dbus.Dictionary({
+            'color': self._color or '',
+            'key': dbus.ByteArray(self._key or ''),
+            'ip4-address': self._ip4_address or '',
+            }, signature='sv')
+
+        # FIXME: clarify whether we're meant to support random extra properties
+        # (Salut doesn't)
+        if tp._PROTOCOL == 'salut':
+            del props['ip4-address']
+
+        conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
                 reply_handler=_noop,
                 error_handler=lambda e:
-                    _logger.warning('Error setting alias: %s', e))
+                    _logger.warning('Error setting OLPC properties: %s', e))
         # Hack so we can use this as a timeout handler
         return False
 
@@ -723,8 +733,17 @@ class GenericOwner(Buddy):
             _logger.debug("server does not accept JPEG format avatars.")
             return
 
-        img_data = _get_buddy_icon_at_size(icon_data, min(maxw, 96),
-                                           min(maxh, 96), maxsize)
+        width = 96
+        height = 96
+        size = 8192
+        if maxw > 0 and width > maxw:
+            width = maxw
+        if maxw > 0 and height > maxh:
+            height = maxh
+        if maxsize > 0 and size > maxsize:
+            size = maxsize
+
+        img_data = _get_buddy_icon_at_size(icon_data, width, height, size)
         conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
                 reply_handler=set_self_avatar_cb,
                 error_handler=lambda e:

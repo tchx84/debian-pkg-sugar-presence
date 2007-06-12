@@ -22,7 +22,7 @@ from itertools import izip
 
 import gobject
 
-from telepathy.client import Channel
+from telepathy.client import (Channel, Connection)
 from telepathy.constants import (CONNECTION_STATUS_DISCONNECTED,
     CONNECTION_STATUS_CONNECTING, CONNECTION_STATUS_CONNECTED,
     CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED,
@@ -31,14 +31,15 @@ from telepathy.constants import (CONNECTION_STATUS_DISCONNECTED,
 from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CHANNEL_TYPE_STREAMED_MEDIA, CHANNEL_INTERFACE_GROUP,
         CONN_INTERFACE_PRESENCE, CONN_INTERFACE_AVATARS,
-        CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST)
+        CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
+        CONN_MGR_INTERFACE)
 
 
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
 
-_logger = logging.getLogger('s-p-s.server_plugin')
+_logger = logging.getLogger('s-p-s.telepathy_plugin')
 
 
 class TelepathyPlugin(gobject.GObject):
@@ -71,6 +72,8 @@ class TelepathyPlugin(gobject.GObject):
     }
 
     _RECONNECT_TIMEOUT = 5000
+    _TP_CONN_MANAGER = 'gabble'
+    _PROTOCOL = 'jabber'
 
     def __init__(self, registry, owner):
         """Initialize the ServerPlugin instance
@@ -195,9 +198,9 @@ class TelepathyPlugin(gobject.GObject):
 
         if status == CONNECTION_STATUS_DISCONNECTED:
             def connect_reply():
-                _logger.debug('Connect() succeeded')
+                _logger.debug('%r: Connect() succeeded', self)
             def connect_error(e):
-                _logger.debug('Connect() failed: %s', e)
+                _logger.debug('%r: Connect() failed: %s', self, e)
                 if not self._reconnect_id:
                     self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
                             self._reconnect_cb)
@@ -212,7 +215,15 @@ class TelepathyPlugin(gobject.GObject):
         raise NotImplementedError
 
     def _make_new_connection(self):
-        raise NotImplementedError
+        acct = self._account.copy()
+
+        # Create a new connection
+        mgr = self._registry.GetManager(self._TP_CONN_MANAGER)
+        name, path = mgr[CONN_MGR_INTERFACE].RequestConnection(
+            self._PROTOCOL, acct)
+        conn = Connection(name, path)
+        del acct
+        return conn
 
     def _handle_connection_status_change(self, status, reason):
         if status == self._conn_status:
@@ -220,17 +231,14 @@ class TelepathyPlugin(gobject.GObject):
 
         if status == CONNECTION_STATUS_CONNECTING:
             self._conn_status = status
-            _logger.debug("status: connecting...")
+            _logger.debug("%r: connecting...", self)
         elif status == CONNECTION_STATUS_CONNECTED:
-            if self._connected_cb():
-                _logger.debug("status: connected")
-                self._conn_status = status
-            else:
-                self.cleanup()
-                _logger.debug("status: was connected, but an error occurred")
+            self._conn_status = status
+            _logger.debug("%r: connected", self)
+            self._connected_cb()
         elif status == CONNECTION_STATUS_DISCONNECTED:
             self.cleanup()
-            _logger.debug("status: disconnected (reason %r)", reason)
+            _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
                 pass
@@ -244,9 +252,6 @@ class TelepathyPlugin(gobject.GObject):
                             self._reconnect_cb)
 
         self.emit('status', self._conn_status, int(reason))
-
-    def _connected_cb(self):
-        raise NotImplementedError
 
     def _could_connect(self):
         return True
@@ -277,7 +282,7 @@ class TelepathyPlugin(gobject.GObject):
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
         self._online_contacts -= handles
-        _logger.debug('Contacts now offline: %r', handles)
+        _logger.debug('%r: Contacts now offline: %r', self, handles)
         self.emit("contacts-offline", handles)
 
     def _contacts_online(self, handles):
@@ -308,7 +313,7 @@ class TelepathyPlugin(gobject.GObject):
             objids.append(handle_to_objid[handle])
 
         self._online_contacts |= frozenset(relevant)
-        _logger.debug('Contacts now online:')
+        _logger.debug('%r: Contacts now online:', self)
         for handle, objid in izip(relevant, objids):
             _logger.debug('  %u .../%s', handle, objid)
         self.emit('contacts-online', objids, relevant, jids)
@@ -333,8 +338,8 @@ class TelepathyPlugin(gobject.GObject):
         self._subscribe_remote_pending -= affected
         self._subscribe_remote_pending |= remote_pending
 
-    def _publish_members_changed_cb(self, added, removed, local_pending,
-            remote_pending, actor, reason):
+    def _publish_members_changed_cb(self, message, added, removed,
+            local_pending, remote_pending, actor, reason):
 
         if local_pending:
             # accept all requested subscriptions
@@ -401,10 +406,8 @@ class TelepathyPlugin(gobject.GObject):
     def _connected_cb(self):
         """Callback on successful connection to a server
         """
-
-        if self._account['register']:
-            # we successfully register this account
-            self._owner.set_registered(True)
+        # FIXME: cope with CMs that lack some of the interfaces
+        # FIXME: cope with CMs with no 'publish' or 'subscribe'
 
         # request both handles at the same time to reduce round-trips
         pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
@@ -450,7 +453,6 @@ class TelepathyPlugin(gobject.GObject):
 
         # Request presence for everyone we're subscribed to
         self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
-        return True
 
     def start(self):
         """Start up the Telepathy networking connections
@@ -464,7 +466,7 @@ class TelepathyPlugin(gobject.GObject):
             _connect_reply_cb or _connect_error_cb
         """
 
-        _logger.debug("Starting up...")
+        _logger.debug("%r: Starting up...", self)
 
         if self._reconnect_id > 0:
             gobject.source_remove(self._reconnect_id)
@@ -474,4 +476,4 @@ class TelepathyPlugin(gobject.GObject):
         if self._could_connect():
             self._init_connection()
         else:
-            _logger.debug('Postponing connection')
+            _logger.debug('%r: Postponing connection', self)

@@ -1,4 +1,4 @@
-"""Telepathy-python presence server interface/implementation plugin"""
+"""XMPP server plugin for Presence Service"""
 # Copyright (C) 2007, Red Hat, Inc.
 # Copyright (C) 2007, Collabora Ltd.
 #
@@ -35,8 +35,6 @@ import psutils
 from telepathy_plugin import TelepathyPlugin
 
 
-_PROTOCOL = "jabber"
-_OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/jabber/"
 
 _logger = logging.getLogger('s-p-s.server_plugin')
 
@@ -49,6 +47,10 @@ class ServerPlugin(TelepathyPlugin):
     python calls to perform the required network operations
     to implement the PresenceService.
     """
+
+    _TP_CONN_MANAGER = 'gabble'
+    _PROTOCOL = 'jabber'
+    _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/jabber/"
 
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
@@ -98,9 +100,9 @@ class ServerPlugin(TelepathyPlugin):
         # Search existing connections, if any, that we might be able to use
         connections = Connection.get_connections()
         for item in connections:
-            if not item.object_path.startswith(_OBJ_PATH_PREFIX):
+            if not item.object_path.startswith(self._OBJ_PATH_PREFIX):
                 continue
-            if item[CONN_INTERFACE].GetProtocol() != _PROTOCOL:
+            if item[CONN_INTERFACE].GetProtocol() != self._PROTOCOL:
                 continue
             if item[CONN_INTERFACE].GetStatus() == CONNECTION_STATUS_CONNECTED:
                 test_handle = item[CONN_INTERFACE].RequestHandles(
@@ -110,19 +112,15 @@ class ServerPlugin(TelepathyPlugin):
             return item
         return None
 
-    def _make_new_connection(self):
-        acct = self._account.copy()
-
-        # Create a new connection
-        gabble_mgr = self._registry.GetManager('gabble')
-        name, path = gabble_mgr[CONN_MGR_INTERFACE].RequestConnection(
-            _PROTOCOL, acct)
-        conn = Connection(name, path)
-        del acct
-        return conn
-
     def _could_connect(self):
         return bool(self._ip4am.props.address)
+
+    def _connected_cb(self):
+        if self._account['register']:
+            # we successfully register this account
+            self._owner.set_registered(True)
+
+        TelepathyPlugin._connected_cb(self)
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to

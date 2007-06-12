@@ -58,18 +58,12 @@ class NotFoundError(DBusException):
 class PresenceService(ExportedGObject):
     __gtype_name__ = "PresenceService"
 
-    __gsignals__ = {
-        'connection-status': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                            ([gobject.TYPE_BOOLEAN]))
-    }
-
     def _create_owner(self):
         # Overridden by TestPresenceService
         return ShellOwner(self, self._session_bus)
 
     def __init__(self):
         self._next_object_id = 0
-        self._connected = False
 
         # all Buddy objects
         # identifier -> Buddy, GC'd when no more refs exist
@@ -106,26 +100,26 @@ class PresenceService(ExportedGObject):
         self._registry = ManagerRegistry()
         self._registry.LoadManagers()
 
-        # Set up the server connection
+        # Set up the Telepathy plugins
         self._server_plugin = ServerPlugin(self._registry, self._owner)
-        self._handles_buddies[self._server_plugin] = {}
-        self._activities_by_handle[self._server_plugin] = {}
+        self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
+        self._plugins = [self._server_plugin, self._ll_plugin]
+        self._connected_plugins = set()
 
-        self._server_plugin.connect('status', self._server_status_cb)
-        self._server_plugin.connect('contacts-online', self._contacts_online)
-        self._server_plugin.connect('contacts-offline', self._contacts_offline)
-        self._server_plugin.connect('activity-invitation',
-                                    self._activity_invitation)
-        self._server_plugin.connect('private-invitation',
-                                    self._private_invitation)
-        self._server_plugin.start()
+        for tp in self._plugins:
+            self._handles_buddies[tp] = {}
+            self._activities_by_handle[tp] = {}
+
+            tp.connect('status', self._tp_status_cb)
+            tp.connect('contacts-online', self._contacts_online)
+            tp.connect('contacts-offline', self._contacts_offline)
+            tp.connect('activity-invitation',
+                                        self._activity_invitation)
+            tp.connect('private-invitation',
+                                        self._private_invitation)
+            tp.start()
 
         self._contacts_online_queue = []
-
-        # Set up the link local connection
-        self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
-        self._handles_buddies[self._ll_plugin] = {}
-        self._activities_by_handle[self._ll_plugin] = {}
 
         ExportedGObject.__init__(self, self._session_bus, _PRESENCE_PATH)
 
@@ -143,21 +137,14 @@ class PresenceService(ExportedGObject):
         """Log event when D-Bus kicks us off the bus for some reason"""
         _logger.debug("Disconnected from session bus!!!")
 
-    def _server_status_cb(self, plugin, status, reason):
-
-        # FIXME: figure out connection status when we have a salut plugin too
-        old_status = self._connected
+    def _tp_status_cb(self, plugin, status, reason):
         if status == CONNECTION_STATUS_CONNECTED:
-            self._connected = True
             self._tp_connected(plugin)
         else:
-            self._connected = False
             self._tp_disconnected(plugin)
 
-        if self._connected != old_status:
-            self.emit('connection-status', self._connected)
-
     def _tp_connected(self, tp):
+        self._connected_plugins.add(tp)
         self._handles_buddies[tp][tp.self_handle] = self._owner
         self._owner.add_telepathy_handle(tp, tp.self_handle,
                                          tp.self_identifier)
@@ -235,6 +222,7 @@ class PresenceService(ExportedGObject):
                             conn.object_path)
 
     def _tp_disconnected(self, tp):
+        self._connected_plugins.discard(tp)
         if tp.self_handle is not None:
             self._handles_buddies.setdefault(tp, {}).pop(
                     tp.self_handle, None)
@@ -690,10 +678,19 @@ class PresenceService(ExportedGObject):
         self._share_activity(actid, atype, name, properties,
                              async_cb, async_err_cb)
 
+    def _get_preferred_plugin(self):
+        for tp in self._plugins:
+            if tp in self._connected_plugins:
+                return tp
+        return None
+
     @dbus.service.method(_PRESENCE_INTERFACE,
                          in_signature='', out_signature="so")
     def GetPreferredConnection(self):
-        conn = self._server_plugin.get_connection()
+        tp = self._get_preferred_plugin
+        if tp is None:
+            raise NotFoundError('No connection is available')
+        conn = tp.get_connection()
         return str(conn.service_name), conn.object_path
 
     def cleanup(self):
@@ -706,7 +703,7 @@ class PresenceService(ExportedGObject):
         # FIXME check which tp client we should use to share the activity
         color = self._owner.props.color
         activity = Activity(self._session_bus, objid, self,
-                            self._server_plugin, 0,
+                            self._get_preferred_plugin(), 0,
                             id=actid, type=atype,
                             name=name, color=color, local=True)
         activity.connect("validity-changed",
