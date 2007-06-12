@@ -126,150 +126,19 @@ class ServerPlugin(TelepathyPlugin):
             return item
         return None
 
-    def _init_connection(self):
-        """Set up our connection
+    def _make_new_connection(self):
+        acct = self._account.copy()
 
-        if there is no existing connection
-            (_find_existing_connection returns None)
-        produce a new connection with our protocol for our
-        account.
+        # Create a new connection
+        gabble_mgr = self._registry.GetManager('gabble')
+        name, path = gabble_mgr[CONN_MGR_INTERFACE].RequestConnection(
+            _PROTOCOL, acct)
+        conn = Connection(name, path)
+        del acct
+        return conn
 
-        if there is an existing connection, reuse it by
-        registering for various of events on it.
-        """
-        conn = self._find_existing_connection()
-        if not conn:
-            acct = self._account.copy()
-
-            # Create a new connection
-            gabble_mgr = self._registry.GetManager('gabble')
-            name, path = gabble_mgr[CONN_MGR_INTERFACE].RequestConnection(
-                _PROTOCOL, acct)
-            conn = Connection(name, path)
-            del acct
-
-        m = conn[CONN_INTERFACE].connect_to_signal('StatusChanged',
-           self._handle_connection_status_change)
-        self._matches.append(m)
-        m = conn[CONN_INTERFACE].connect_to_signal('NewChannel',
-                                                   self._new_channel_cb)
-        self._matches.append(m)
-
-        # hack
-        conn._valid_interfaces.add(CONN_INTERFACE_PRESENCE)
-        conn._valid_interfaces.add(CONN_INTERFACE_BUDDY_INFO)
-        conn._valid_interfaces.add(CONN_INTERFACE_ACTIVITY_PROPERTIES)
-        conn._valid_interfaces.add(CONN_INTERFACE_AVATARS)
-        conn._valid_interfaces.add(CONN_INTERFACE_ALIASING)
-
-        m = conn[CONN_INTERFACE_PRESENCE].connect_to_signal('PresenceUpdate',
-            self._presence_update_cb)
-        self._matches.append(m)
-
-        self._conn = conn
-        status = self._conn[CONN_INTERFACE].GetStatus()
-
-        if status == CONNECTION_STATUS_DISCONNECTED:
-            def connect_reply():
-                _logger.debug('Connect() succeeded')
-            def connect_error(e):
-                _logger.debug('Connect() failed: %s', e)
-                if not self._reconnect_id:
-                    self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
-                            self._reconnect_cb)
-
-            self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
-                                               error_handler=connect_error)
-
-        self._handle_connection_status_change(status,
-                CONNECTION_STATUS_REASON_NONE_SPECIFIED)
-
-    def _connected_cb(self):
-        """Callback on successful connection to a server
-        """
-
-        if self._account['register']:
-            # we successfully register this account
-            self._owner.set_registered(True)
-
-        # request both handles at the same time to reduce round-trips
-        pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
-                HANDLE_TYPE_LIST, ['publish', 'subscribe'])
-
-        # the group of contacts who may receive your presence
-        publish = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
-                HANDLE_TYPE_LIST, pub_handle, True)
-        self._publish_channel = publish
-        m = publish[CHANNEL_INTERFACE_GROUP].connect_to_signal(
-                'MembersChanged', self._publish_members_changed_cb)
-        self._matches.append(m)
-        publish_handles, local_pending, remote_pending = \
-                publish[CHANNEL_INTERFACE_GROUP].GetAllMembers()
-
-        # the group of contacts for whom you wish to receive presence
-        subscribe = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
-                HANDLE_TYPE_LIST, sub_handle, True)
-        self._subscribe_channel = subscribe
-        m = subscribe[CHANNEL_INTERFACE_GROUP].connect_to_signal(
-                'MembersChanged', self._subscribe_members_changed_cb)
-        self._matches.append(m)
-        subscribe_handles, subscribe_lp, subscribe_rp = \
-                subscribe[CHANNEL_INTERFACE_GROUP].GetAllMembers()
-        self._subscribe_members = set(subscribe_handles)
-        self._subscribe_local_pending = set(subscribe_lp)
-        self._subscribe_remote_pending = set(subscribe_rp)
-
-        if local_pending:
-            # accept pending subscriptions
-            # FIXME: do this async
-            publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
-
-        # FIXME: do this async?
-        self.self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
-        self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
-                HANDLE_TYPE_CONTACT, [self.self_handle])[0]
-
-        # request subscriptions from people subscribed to us if we're not
-        # subscribed to them
-        not_subscribed = list(set(publish_handles) - set(subscribe_handles))
-        subscribe[CHANNEL_INTERFACE_GROUP].AddMembers(not_subscribed, '')
-
-        if CONN_INTERFACE_BUDDY_INFO not in self._conn.get_valid_interfaces():
-            _logger.debug('OLPC information not available')
-            return False
-
-        # Request presence for everyone we're subscribed to
-        self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
-        return True
-
-    def _should_reconnect(self):
+    def _could_connect(self):
         return bool(self._ip4am.props.address)
-
-    def start(self):
-        """Start up the Telepathy networking connections
-
-        if we are already connected, query for the initial contact
-        information.
-
-        if we are already connecting, do nothing
-
-        otherwise initiate a connection and transfer control to
-            _connect_reply_cb or _connect_error_cb
-        """
-
-        _logger.debug("Starting up...")
-
-        if self._reconnect_id > 0:
-            gobject.source_remove(self._reconnect_id)
-            self._reconnect_id = 0
-
-        # Only init connection if we have a valid IP address
-        if self._ip4am.props.address:
-            _logger.debug("::: Have IP4 address %s, will connect",
-                          self._ip4am.props.address)
-            self._init_connection()
-        else:
-            _logger.debug("::: No IP4 address, postponing connection")
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to
