@@ -18,38 +18,22 @@
 
 # Standard library
 import logging
-import os
-import sys
 from itertools import izip
 from string import hexdigits
 
 # Other libraries
-import dbus
 import gobject
-import gtk
-from telepathy.client import (ConnectionManager, ManagerRegistry, Connection,
-    Channel)
+from telepathy.client import (ConnectionManager, Connection)
 from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
-    CHANNEL_TYPE_CONTACT_LIST, CHANNEL_INTERFACE_GROUP,
-    CONN_INTERFACE_ALIASING, CONN_INTERFACE_AVATARS, CONN_INTERFACE_PRESENCE,
-    CHANNEL_TYPE_TEXT, CHANNEL_TYPE_STREAMED_MEDIA, PROPERTIES_INTERFACE)
+    CHANNEL_INTERFACE_GROUP)
 from telepathy.constants import (HANDLE_TYPE_CONTACT,
-    HANDLE_TYPE_LIST, HANDLE_TYPE_CONTACT, HANDLE_TYPE_ROOM,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
-    CONNECTION_STATUS_CONNECTING,
-    CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED,
-    CONNECTION_STATUS_REASON_NONE_SPECIFIED,
-    CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
-    PROPERTY_FLAG_WRITE)
-from sugar import util
+    CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES)
 
 # Presence Service local modules
 import psutils
 from telepathy_plugin import TelepathyPlugin
 
-
-CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
-CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
 _PROTOCOL = "jabber"
 _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/jabber/"
