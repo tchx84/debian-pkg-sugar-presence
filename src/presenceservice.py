@@ -700,7 +700,8 @@ class PresenceService(ExportedGObject):
     def _share_activity(self, actid, atype, name, properties, async_cb,
                         async_err_cb):
         objid = self._get_next_object_id()
-        # FIXME check which tp client we should use to share the activity
+        # FIXME: is the preferred Telepathy plugin always the right way to
+        # share the activity?
         color = self._owner.props.color
         activity = Activity(self._session_bus, objid, self,
                             self._get_preferred_plugin(), 0,
