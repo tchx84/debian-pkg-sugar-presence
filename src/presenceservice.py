@@ -391,7 +391,8 @@ class PresenceService(ExportedGObject):
     def _buddy_validity_changed_cb(self, buddy, valid):
         if valid:
             self.BuddyAppeared(buddy.object_path())
-            self._buddies_by_pubkey[buddy.props.key] = buddy
+            if buddy.props.key is not None:
+                self._buddies_by_pubkey[buddy.props.key] = buddy
             _logger.debug("New Buddy: %s (%s)", buddy.props.nick,
                           buddy.props.color)
         else:
