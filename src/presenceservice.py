@@ -17,6 +17,7 @@
 
 import logging
 from itertools import izip
+from os import environ
 from weakref import WeakValueDictionary
 
 import dbus
@@ -103,7 +104,12 @@ class PresenceService(ExportedGObject):
         # Set up the Telepathy plugins
         self._server_plugin = ServerPlugin(self._registry, self._owner)
         self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
-        self._plugins = [self._server_plugin, self._ll_plugin]
+        self._plugins = []
+        debug_flags = set(environ.get('PRESENCE_SERVICE_DEBUG', '').split(','))
+        if 'disable-gabble' not in debug_flags:
+            self._plugins.append(self._server_plugin)
+        if 'disable-salut' not in debug_flags:
+            self._plugins.append(self._ll_plugin)
         self._connected_plugins = set()
 
         for tp in self._plugins:
