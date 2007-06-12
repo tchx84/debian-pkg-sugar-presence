@@ -736,11 +736,12 @@ class GenericOwner(Buddy):
 
     def add_telepathy_handle(self, tp_client, handle, uid):
         Buddy.add_telepathy_handle(self, tp_client, handle, uid)
+        self._activities_by_connection.setdefault(tp_client, {})
 
         self._set_self_olpc_properties(tp_client)
         self._set_self_alias(tp_client)
         # Hack; send twice to make sure the server gets it
-        gobject.timeout_add(1000, lambda: self._set_self_alias(tp_client))
+        #gobject.timeout_add(1000, lambda: self._set_self_alias(tp_client))
 
         self._set_self_activities(tp_client)
         self._set_self_current_activity(tp_client)
