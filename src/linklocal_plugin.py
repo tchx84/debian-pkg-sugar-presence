@@ -23,6 +23,7 @@ from string import hexdigits
 
 # Other libraries
 import gobject
+from dbus import SystemBus
 from telepathy.client import (ConnectionManager, Connection)
 from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
     CHANNEL_INTERFACE_GROUP)
@@ -55,6 +56,30 @@ class LinkLocalPlugin(TelepathyPlugin):
 
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
+
+        self._sys_bus = SystemBus()
+        self._have_avahi = False
+        self._watch = self._sys_bus.watch_name_owner('org.freedesktop.Avahi',
+                                                     self._avahi_owner_cb)
+
+    def _avahi_owner_cb(self, unique_name):
+        had_avahi = self._have_avahi
+
+        if unique_name:
+            self._have_avahi = True
+            if not had_avahi:
+                _logger.info('Avahi appeared on the system bus (%s) - '
+                             'starting...', unique_name)
+                self.start()
+        else:
+            self._have_avahi = False
+            if had_avahi:
+                _logger.info('Avahi disappeared from the system bus - '
+                             'stopping...')
+                self.cleanup()
+
+    def _could_connect(self):
+        return self._have_avahi
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
