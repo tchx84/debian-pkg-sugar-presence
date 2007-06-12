@@ -532,17 +532,25 @@ class Buddy(ExportedGObject):
         self.set_properties(props)
         # If the properties didn't contain the key or color, then we're never
         # going to get one.
-        self._awaiting.discard('properties')
-        if not self._awaiting:
-            self.emit('validity-changed', True)
+        try:
+            self._awaiting.remove('properties')
+        except KeyError:
+            pass
+        else:
+            if not self._awaiting:
+                self.emit('validity-changed', True)
 
     def update_alias(self, tp, alias):
         """Update the alias from the given Telepathy connection.
         """
         self.set_properties({'nick': alias})
-        self._awaiting.discard('alias')
-        if not self._awaiting:
-            self.emit('validity-changed', True)
+        try:
+            self._awaiting.remove('alias')
+        except KeyError:
+            pass
+        else:
+            if not self._awaiting:
+                self.emit('validity-changed', True)
 
     def update_current_activity(self, tp, current_activity):
         """Update the current activity from the given Telepathy connection.
