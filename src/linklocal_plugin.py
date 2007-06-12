@@ -178,7 +178,7 @@ class LinkLocalPlugin(TelepathyPlugin):
 
             if CONN_INTERFACE_BUDDY_INFO in self._conn:
                 props = self._conn[CONN_INTERFACE_BUDDY_INFO].GetProperties(
-                    handle)
+                    handle, byte_arrays=True, utf8_strings=True)
                 key = props.get('key')
             else:
                 key = None
