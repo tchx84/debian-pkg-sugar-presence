@@ -16,6 +16,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import logging
+from itertools import izip
 from weakref import WeakValueDictionary
 
 import dbus
@@ -111,13 +112,15 @@ class PresenceService(ExportedGObject):
         self._activities_by_handle[self._server_plugin] = {}
 
         self._server_plugin.connect('status', self._server_status_cb)
-        self._server_plugin.connect('contact-online', self._contact_online)
-        self._server_plugin.connect('contact-offline', self._contact_offline)
+        self._server_plugin.connect('contacts-online', self._contacts_online)
+        self._server_plugin.connect('contacts-offline', self._contacts_offline)
         self._server_plugin.connect('activity-invitation',
                                     self._activity_invitation)
         self._server_plugin.connect('private-invitation',
                                     self._private_invitation)
         self._server_plugin.start()
+
+        self._contacts_online_queue = []
 
         # Set up the link local connection
         self._ll_plugin = LinkLocalPlugin(self._registry, self._owner)
@@ -259,26 +262,121 @@ class PresenceService(ExportedGObject):
             self._buddies[objid] = buddy
         return buddy
 
-    def _contact_online(self, tp, objid, handle, identifier):
-        _logger.debug('Handle %u, .../%s is now online', handle, objid)
-        buddy = self.get_buddy(objid)
+    def _contacts_online(self, tp, objids, handles, identifiers):
+        # we'll iterate over handles many times, so make sure that will
+        # work
+        if not isinstance(handles, (list, tuple)):
+            handles = tuple(handles)
 
-        self._handles_buddies[tp][handle] = buddy
-        # store the handle of the buddy for this CM
-        buddy.add_telepathy_handle(tp, handle, identifier)
+        for objid, handle, identifier in izip(objids, handles, identifiers):
+            _logger.debug('Handle %u, .../%s is now online', handle, objid)
+            buddy = self.get_buddy(objid)
+
+            self._handles_buddies[tp][handle] = buddy
+            # Store the handle of the buddy for this CM. This doesn't
+            # fetch anything over D-Bus, to avoid reaching the pending-call
+            # limit.
+            buddy.add_telepathy_handle(tp, handle, identifier)
 
         conn = tp.get_connection()
 
-        # Kick off a request for their current activities. This isn't done
-        # internally by the Buddy itself, because when we get the activities
-        # back, we actually want to feed them to the Activity objects.
+        if not self._contacts_online_queue:
+            gobject.idle_add(self._run_contacts_online_queue)
 
-        def got_activities(activities):
-            self._buddy_activities_changed(tp, handle, activities)
-        conn[CONN_INTERFACE_BUDDY_INFO].GetActivities(handle,
-            reply_handler=got_activities,
-            error_handler=lambda e: _logger.warning('%r: Error getting '
-                'activities: %s', buddy, e))
+        def handle_error(e, when):
+            gobject.idle_add(self._run_contacts_online_queue)
+            _logger.warning('Error %s: %s', when, e)
+
+        if CONN_INTERFACE_ALIASING in conn:
+            def got_aliases(aliases):
+                gobject.idle_add(self._run_contacts_online_queue)
+                for contact, alias in izip(handles, aliases):
+                    self._buddy_properties_changed(tp, contact,
+                                                   {'nick': alias})
+            def request_aliases():
+                try:
+                    conn[CONN_INTERFACE_ALIASING].RequestAliases(handles,
+                        reply_handler=got_aliases,
+                        error_handler=lambda e:
+                            handle_error(e, 'fetching aliases'))
+                except Exception, e:
+                    gobject.idle_add(self._run_contacts_online_queue)
+                    handle_error(e, 'fetching aliases')
+            self._contacts_online_queue.append(request_aliases)
+
+        for handle in handles:
+            self._queue_contact_online(tp, handle)
+
+        if CONN_INTERFACE_AVATARS in conn:
+            def got_avatar_tokens(tokens):
+                gobject.idle_add(self._run_contacts_online_queue)
+                for contact, token in izip(handles, tokens):
+                    self._avatar_updated(tp, contact, token)
+            def get_avatar_tokens():
+                try:
+                    conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(handles,
+                        reply_handler=got_avatar_tokens,
+                        error_handler=lambda e:
+                            handle_error(e, 'fetching avatar tokens'))
+                except Exception, e:
+                    gobject.idle_add(self._run_contacts_online_queue)
+                    handle_error(e, 'fetching avatar tokens')
+            self._contacts_online_queue.append(get_avatar_tokens)
+
+    def _queue_contact_online(self, tp, contact):
+        conn = tp.get_connection()
+
+        if CONN_INTERFACE_BUDDY_INFO in conn:
+            def handle_error(e, when):
+                gobject.idle_add(self._run_contacts_online_queue)
+                _logger.warning('Error %s: %s', when, e)
+            def got_properties(props):
+                gobject.idle_add(self._run_contacts_online_queue)
+                self._buddy_properties_changed(tp, contact, props)
+            def get_properties():
+                try:
+                    conn[CONN_INTERFACE_BUDDY_INFO].GetProperties(contact,
+                        byte_arrays=True, reply_handler=got_properties,
+                        error_handler=lambda e:
+                            handle_error(e, 'fetching buddy properties'))
+                except Exception, e:
+                    gobject.idle_add(self._run_contacts_online_queue)
+                    handle_error(e, 'fetching buddy properties')
+            def get_current_activity():
+                try:
+                    conn[CONN_INTERFACE_BUDDY_INFO].GetCurrentActivity(contact,
+                        reply_handler=lambda c, room:
+                            got_properties({'current-activity': c}),
+                        error_handler=lambda e:
+                            handle_error(e, 'fetching current activity'))
+                except Exception, e:
+                    gobject.idle_add(self._run_contacts_online_queue)
+                    handle_error(e, 'fetching current activity')
+            def got_activities(activities):
+                gobject.idle_add(self._run_contacts_online_queue)
+                self._buddy_activities_changed(tp, contact, activities)
+            def get_activities():
+                try:
+                    conn[CONN_INTERFACE_BUDDY_INFO].GetActivities(contact,
+                        reply_handler=got_activities,
+                        error_handler=lambda e:
+                            handle_error(e, 'fetching activities'))
+                except Exception, e:
+                    gobject.idle_add(self._run_contacts_online_queue)
+                    handle_error(e, 'fetching activities')
+
+            self._contacts_online_queue.append(get_properties)
+            self._contacts_online_queue.append(get_current_activity)
+            self._contacts_online_queue.append(get_activities)
+
+    def _run_contacts_online_queue(self):
+        try:
+            callback = self._contacts_online_queue.pop(0)
+        except IndexError:
+            pass
+        else:
+            callback()
+        return False
 
     def _buddy_validity_changed_cb(self, buddy, valid):
         if valid:
@@ -296,13 +394,14 @@ class PresenceService(ExportedGObject):
         if buddy.props.valid:
             self._buddy_validity_changed_cb(buddy, False)
 
-    def _contact_offline(self, tp, handle):
-        buddy = self._handles_buddies[tp].pop(handle, None)
-        # the handle of the buddy for this CM is not valid anymore
-        # (this might trigger _buddy_disappeared_cb if they are not visible
-        # via any CM)
-        if buddy is not None:
-            buddy.remove_telepathy_handle(tp)
+    def _contacts_offline(self, tp, handles):
+        for handle in handles:
+            buddy = self._handles_buddies[tp].pop(handle, None)
+            # the handle of the buddy for this CM is not valid anymore
+            # (this might trigger _buddy_disappeared_cb if they are not
+            # visible via any CM)
+            if buddy is not None:
+                buddy.remove_telepathy_handle(tp)
 
     def _get_next_object_id(self):
         """Increment and return the object ID counter."""

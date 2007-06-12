@@ -67,17 +67,16 @@ class ServerPlugin(gobject.GObject):
     to implement the PresenceService.
     """
     __gsignals__ = {
-        'contact-online':
-            # Contact has come online and we've discovered all their buddy
-            # properties.
+        'contacts-online':
+            # Contacts in the subscribe list have come online.
             # args:
-            #   contact identification (based on key ID or JID): str
-            #   contact handle: int or long
-            #   contact identifier (JID): str or unicode
-            (gobject.SIGNAL_RUN_FIRST, None, [str, object, object]),
-        'contact-offline':
-            # Contact has gone offline.
-            # args: contact handle
+            #   contact identification (based on key ID or JID): list of str
+            #   contact handle: list of int or long
+            #   contact identifier (JID): list of str or unicode
+            (gobject.SIGNAL_RUN_FIRST, None, [object, object, object]),
+        'contacts-offline':
+            # Contacts in the subscribe list have gone offline.
+            # args: iterable over contact handles
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
         'status':
             # Connection status changed.
@@ -114,7 +113,8 @@ class ServerPlugin(gobject.GObject):
         self._matches = []
 
         self._registry = registry
-        self._online_contacts = {}  # handle -> jid
+        #: set of contact handles: those for whom we've emitted contacts-online
+        self._online_contacts = set()
 
         self._owner = owner
         self.self_handle = None
@@ -308,8 +308,7 @@ class ServerPlugin(gobject.GObject):
         # FIXME: do this async?
         self.self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
         self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
-                HANDLE_TYPE_CONTACT, self.self_handle)[0]
-        self._online_contacts[self.self_handle] = self.self_identifier
+                HANDLE_TYPE_CONTACT, [self.self_handle])[0]
 
         # request subscriptions from people subscribed to us if we're not
         # subscribed to them
@@ -417,21 +416,18 @@ class ServerPlugin(gobject.GObject):
         self._conn = None
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
 
-        for handle in self._online_contacts.keys():
-            self._contact_offline(handle)
-        self._online_contacts = {}
+        if self._online_contacts:
+            self._contacts_offline(self._online_contacts)
 
         if self._reconnect_id > 0:
             gobject.source_remove(self._reconnect_id)
             self._reconnect_id = 0
 
-    def _contact_offline(self, handle):
-        """Handle contact going offline (send message, update set)"""
-        if not self._online_contacts.has_key(handle):
-            return
-        if self._online_contacts[handle]:
-            self.emit("contact-offline", handle)
-        del self._online_contacts[handle]
+    def _contacts_offline(self, handles):
+        """Handle contacts going offline (send message, update set)"""
+        self._online_contacts -= handles
+        _logger.debug('Contacts now offline: %r', handles)
+        self.emit("contacts-offline", handles)
 
     def _contacts_online(self, handles):
         """Handle contacts coming online"""
@@ -449,14 +445,22 @@ class ServerPlugin(gobject.GObject):
             # else it's probably a channel-specific handle - can't create a
             # Buddy object for those yet
 
+        if not relevant:
+            return
+
         jids = self._conn[CONN_INTERFACE].InspectHandles(
                 HANDLE_TYPE_CONTACT, relevant)
 
-        objids = self.identify_contacts(None, relevant, jids)
+        handle_to_objid = self.identify_contacts(None, relevant, jids)
+        objids = []
+        for handle in relevant:
+            objids.append(handle_to_objid[handle])
 
-        for handle, jid, objid in izip(relevant, jids, objids):
-            self._online_contacts[handle] = jid
-            self.emit('contact-online', objid, handle, jid)
+        self._online_contacts |= frozenset(relevant)
+        _logger.debug('Contacts now online:')
+        for handle, objid in izip(relevant, objids):
+            _logger.debug('  %u .../%s', handle, objid)
+        self.emit('contacts-online', objids, relevant, jids)
 
     def _subscribe_members_changed_cb(self, message, added, removed,
                                       local_pending, remote_pending,
@@ -496,31 +500,24 @@ class ServerPlugin(gobject.GObject):
     def _presence_update_cb(self, presence):
         """Send update for online/offline status of presence"""
 
-        now_online = []
-        now_offline = []
+        now_online = set()
+        now_offline = set(presence.iterkeys())
 
         for handle in presence:
             timestamp, statuses = presence[handle]
-            online = handle in self._online_contacts
             for status, params in statuses.items():
-                if not online and status == "offline":
-                    # weren't online in the first place...
-                    continue
-                jid = self._conn[CONN_INTERFACE].InspectHandles(
-                        HANDLE_TYPE_CONTACT, [handle])[0]
-                olstr = "ONLINE"
-                if not online: olstr = "OFFLINE"
-                _logger.debug("Handle %s (%s) was %s, status now '%s'.",
-                              handle, jid, olstr, status)
-                if not online and status in ["available", "away", "brb",
-                                             "busy", "dnd", "xa"]:
-                    now_online.append(handle)
-                elif status in ["offline", "invisible"]:
-                    now_offline.append(handle)
+                # FIXME: use correct logic involving the GetStatuses method
+                if status in ["available", "away", "brb", "busy", "dnd", "xa"]:
+                    now_online.add(handle)
+                    now_offline.discard(handle)
 
-        self._contacts_online(now_online)
-        for handle in now_offline:
-            self._contact_offline(handle)
+        now_online -= self._online_contacts
+        now_offline &= self._online_contacts
+
+        if now_online:
+            self._contacts_online(now_online)
+        if now_offline:
+            self._contacts_offline(now_offline)
 
     def _new_channel_cb(self, object_path, channel_type, handle_type, handle,
                         suppress_handler):

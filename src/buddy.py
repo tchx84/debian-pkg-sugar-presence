@@ -295,64 +295,6 @@ class Buddy(ExportedGObject):
         self._handles[tp_client] = (handle, uid)
         self.TelepathyHandleAdded(conn.service_name, conn.object_path, handle)
 
-        # FIXME: we should probably have a class SomeoneElse(Buddy) for
-        # everyone who's not the owner
-        if not self._owner:
-            self._discover_properties(tp_client, handle, uid)
-
-    def _discover_properties(self, tp_client, handle, uid):
-        conn = tp_client.get_connection()
-
-        accumulator = {}
-
-        def got_aliases(aliases):
-            try:
-                _logger.debug('Buddy %s nick set to %s', self._object_id,
-                              aliases[0])
-                accumulator.update({'nick': aliases[0]})
-            finally:
-                self.set_properties(accumulator)
-        def aliases_error(e):
-            try:
-                _logger.warning('Error getting buddy properties for %s: '
-                                '%s', uid, e)
-            finally:
-                self.set_properties(accumulator)
-
-        def get_alias():
-            accumulator.setdefault('nick', uid)
-            if CONN_INTERFACE_ALIASING in conn:
-                conn[CONN_INTERFACE_ALIASING].RequestAliases([handle],
-                    reply_handler=got_aliases,
-                    error_handler=aliases_error)
-            else:
-                self.set_properties(accumulator)
-
-        def got_properties(props):
-            try:
-                _logger.debug('Buddy %s properties are %r', self._object_id,
-                              props)
-                accumulator.update(props)
-            finally:
-                get_alias()
-        def properties_error(e):
-            try:
-                _logger.warning('Error getting buddy properties for %s: '
-                                '%s', uid, e)
-            finally:
-                get_alias()
-
-        # Kick off the first request, which is for the properties.
-        # Chain from there to the aliases request; chain from *there* to
-        # setting the accumulated properties.
-        accumulator['color'] = 'white'
-        if CONN_INTERFACE_BUDDY_INFO in conn:
-            conn[CONN_INTERFACE_BUDDY_INFO].GetProperties(handle,
-                byte_arrays=True, reply_handler=got_properties,
-                error_handler=properties_error)
-        else:
-            get_alias()
-
     @dbus.service.signal(_BUDDY_INTERFACE, signature='sou')
     def TelepathyHandleAdded(self, tp_conn_name, tp_conn_path, handle):
         """Another Telepathy handle has become associated with the buddy.
