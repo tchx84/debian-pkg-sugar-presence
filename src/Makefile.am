@@ -18,7 +18,8 @@ psdata_PYTHON = \
 	presenceservice.py \
 	pstest.py \
 	psutils.py \
-	server_plugin.py
+	server_plugin.py \
+	telepathy_plugin.py
 
 dist_bin_SCRIPTS = sugar-presence-service
 
