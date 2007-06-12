@@ -386,16 +386,8 @@ class Buddy(ExportedGObject):
         props[_PROP_OWNER] = self.props.owner or ''
         props[_PROP_KEY] = self.props.key or ''
         props[_PROP_COLOR] = self.props.color or ''
-
-        if self.props.ip4_address:
-            props[_PROP_IP4_ADDRESS] = self.props.ip4_address
-        else:
-            props[_PROP_IP4_ADDRESS] = ""
-
-        if self.props.current_activity:
-            props[_PROP_CURACT] = self.props.current_activity
-        else:
-            props[_PROP_CURACT] = ""
+        props[_PROP_IP4_ADDRESS] = self.props.ip4_address or ''
+        props[_PROP_CURACT] = self.props.current_activity or ''
         return props
 
     @dbus.service.method(_BUDDY_INTERFACE,
