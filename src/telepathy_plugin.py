@@ -196,6 +196,8 @@ class TelepathyPlugin(gobject.GObject):
         self._conn = conn
         status = self._conn[CONN_INTERFACE].GetStatus()
 
+        self._owner.set_properties_before_connect(self)
+
         if status == CONNECTION_STATUS_DISCONNECTED:
             def connect_reply():
                 _logger.debug('%r: Connect() succeeded', self)

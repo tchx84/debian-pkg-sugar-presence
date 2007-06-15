@@ -27,6 +27,7 @@ except ImportError:
 import gobject
 import gtk
 import dbus
+import dbus.proxies
 import dbus.service
 from dbus.gobject_service import ExportedGObject
 from telepathy.constants import CONNECTION_STATUS_CONNECTED
@@ -678,7 +679,10 @@ class GenericOwner(Buddy):
         # Hack so we can use this as a timeout handler
         return False
 
-    def _set_self_olpc_properties(self, tp):
+    def set_properties_before_connect(self, tp):
+        self._set_self_olpc_properties(tp, connected=False)
+
+    def _set_self_olpc_properties(self, tp, connected=True):
         conn = tp.get_connection()
         # FIXME: omit color/key/ip4-address if None?
 
@@ -693,10 +697,30 @@ class GenericOwner(Buddy):
         if tp._PROTOCOL == 'salut':
             del props['ip4-address']
 
-        conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
-                reply_handler=_noop,
-                error_handler=lambda e:
-                    _logger.warning('Error setting OLPC properties: %s', e))
+        if connected:
+            conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
+                    reply_handler=_noop,
+                    error_handler=lambda e:
+                        _logger.warning('Error setting OLPC properties: %s', e))
+        else:
+            # we don't yet know whether the connection supports setting buddy
+            # properties
+            # FIXME: remove this hack, and the import of dbus.proxies, when
+            # we have a newer tp-python that makes dbus_object public
+            try:
+                obj = conn.dbus_object
+                if not isinstance(obj, dbus.proxies.ProxyObject):
+                    raise AttributeError
+            except AttributeError:
+                obj = conn._dbus_object
+
+            obj.SetProperties(props, dbus_interface=CONN_INTERFACE_BUDDY_INFO,
+                    reply_handler=lambda:
+                        _logger.debug('Successfully preloaded buddy props'),
+                    error_handler=lambda e:
+                        _logger.debug('Failed to preload buddy properties, '
+                                      'will try again after Connect(): %s', e))
+
         # Hack so we can use this as a timeout handler
         return False
 
