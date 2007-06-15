@@ -240,7 +240,8 @@ class ServerPlugin(TelepathyPlugin):
         # subscribed to them
         not_subscribed = set(publish_handles)
         not_subscribed -= self._subscribe_members
-        subscribe[CHANNEL_INTERFACE_GROUP].AddMembers(not_subscribed, '')
+        self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                not_subscribed, '')
 
     def _publish_members_changed_cb(self, message, added, removed,
                                     local_pending, remote_pending,
