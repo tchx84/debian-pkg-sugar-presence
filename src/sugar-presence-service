@@ -31,7 +31,12 @@ _logger = logging.getLogger('s-p-s')
 def usage():
     _logger.debug("Usage: sugar-presence-service [<test buddy number (1 - 10)>] [randomize]")
 
-sys.path.append(env.get_service_path('presence'))
+if not os.environ.has_key('SUGAR_PREFIX'):
+	print 'SUGAR_PREFIX must be set.'
+	sys.exit(0)
+
+prefix = os.environ['SUGAR_PREFIX']
+sys.path.append(os.path.join(prefix, 'share/sugar/services/presence'))
 
 test_num = 0
 randomize = False
