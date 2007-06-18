@@ -703,7 +703,7 @@ class PresenceService(ExportedGObject):
     @dbus.service.method(_PRESENCE_INTERFACE,
                          in_signature='', out_signature="so")
     def GetPreferredConnection(self):
-        tp = self._get_preferred_plugin
+        tp = self._get_preferred_plugin()
         if tp is None:
             raise NotFoundError('No connection is available')
         conn = tp.get_connection()
