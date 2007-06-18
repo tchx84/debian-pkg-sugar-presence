@@ -36,7 +36,7 @@ if not os.environ.has_key('SUGAR_PREFIX'):
 	sys.exit(0)
 
 prefix = os.environ['SUGAR_PREFIX']
-sys.path.append(os.path.join(prefix, 'share/sugar/services/presence'))
+sys.path.append(os.path.join(prefix, 'share/sugar-presence-service'))
 
 test_num = 0
 randomize = False

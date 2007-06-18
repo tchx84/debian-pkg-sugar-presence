@@ -8,7 +8,7 @@ $(service_DATA): Makefile
 	echo 'Exec = $(bindir)/sugar-presence-service'; \
 	) > $@
 
-psdatadir = $(datadir)/sugar/services/presence
+psdatadir = $(datadir)/sugar-presence-service
 psdata_PYTHON = \
 	__init__.py \
 	activity.py \
