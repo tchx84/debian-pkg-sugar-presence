@@ -246,7 +246,9 @@ class ServerPlugin(TelepathyPlugin):
     def _publish_members_changed_cb(self, message, added, removed,
                                     local_pending, remote_pending,
                                     actor, reason):
-        TelepathyPlugin._publish_members_changed_cb()
+        TelepathyPlugin._publish_members_changed_cb(self, message,
+            added, removed, local_pending, remote_pending, actor,
+            reason)
 
         if local_pending:
             # accept all requested subscriptions
