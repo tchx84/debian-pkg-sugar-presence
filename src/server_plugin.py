@@ -128,13 +128,6 @@ class ServerPlugin(TelepathyPlugin):
     def _could_connect(self):
         return bool(self._ip4am.props.address)
 
-    def _connected_cb(self):
-        if self._account['register']:
-            # we successfully register this account
-            self._owner.set_registered(True)
-
-        TelepathyPlugin._connected_cb(self)
-
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to
         verify public-key ownership correctly, and only allows users to
@@ -235,6 +228,10 @@ class ServerPlugin(TelepathyPlugin):
         return ret
 
     def _connected_cb(self):
+        if self._account['register']:
+            # we successfully register this account
+            self._owner.set_registered(True)
+
         TelepathyPlugin._connected_cb(self)
 
         publish_handles, local_pending, remote_pending = \
