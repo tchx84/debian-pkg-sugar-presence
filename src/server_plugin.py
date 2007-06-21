@@ -88,6 +88,15 @@ class ServerPlugin(TelepathyPlugin):
             'register': not self._owner.get_registered(),
             }
 
+    def suggest_room_for_activity(self, activity_id):
+        """Suggest a room to use to share the given activity.
+        """
+        # We shouldn't have to do this, but Gabble sometimes finds the IRC
+        # transport and goes "that has chatrooms, that'll do nicely". Work
+        # around it til Gabble gets better at finding the MUC service.
+        return '%s@%s' % (activity_id,
+                          self._account['fallback-conference-server'])
+
     def _find_existing_connection(self):
         """Try to find an existing Telepathy connection to this server
 
