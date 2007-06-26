@@ -603,11 +603,14 @@ class Activity(ExportedGObject):
 
     def _join_activity_create_channel_cb(self, chan_path):
         channel = Channel(self._tp.get_connection().service_name, chan_path)
-        channel[PROPERTIES_INTERFACE].ListProperties(
-            reply_handler=lambda prop_specs:
-                self._join_activity_channel_props_listed_cb(
-                    channel, prop_specs),
-            error_handler=self._join_failed_cb)
+        if PROPERTIES_INTERFACE not in channel:
+            self._join_activity_channel_props_listed_cb(channel, ())
+        else:
+            channel[PROPERTIES_INTERFACE].ListProperties(
+                reply_handler=lambda prop_specs:
+                    self._join_activity_channel_props_listed_cb(
+                        channel, prop_specs),
+                error_handler=self._join_failed_cb)
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
