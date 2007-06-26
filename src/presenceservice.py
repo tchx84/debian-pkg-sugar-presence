@@ -333,7 +333,11 @@ class PresenceService(ExportedGObject):
         if CONN_INTERFACE_BUDDY_INFO in conn:
             def handle_error(e, when):
                 gobject.idle_add(self._run_contacts_online_queue)
-                _logger.warning('Error %s: %s', when, e)
+                buddy = self._handles_buddies[tp].get(contact)
+                if buddy is not None:
+                    buddy = buddy.props.objid
+                _logger.warning('Error %s for handle %u %s: %s', when,
+                                contact, buddy, e)
             def got_properties(props):
                 gobject.idle_add(self._run_contacts_online_queue)
                 buddy = self._handles_buddies[tp].get(contact)
