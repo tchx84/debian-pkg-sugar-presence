@@ -402,6 +402,8 @@ class TelepathyPlugin(gobject.GObject):
         # FIXME: cope with CMs that lack some of the interfaces
         # FIXME: cope with CMs with no 'publish' or 'subscribe'
 
+        # FIXME: retry if getting the channel times out
+
         # request both handles at the same time to reduce round-trips
         pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
                 HANDLE_TYPE_LIST, ['publish', 'subscribe'])
