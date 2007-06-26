@@ -284,7 +284,7 @@ class Activity(ExportedGObject):
 
         buddy_path -- DBUS path to buddy object
         """
-        pass
+        _logger.debug('BuddyJoined: %s', buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="o")
@@ -293,7 +293,7 @@ class Activity(ExportedGObject):
 
         buddy_path -- DBUS path to buddy object
         """
-        pass
+        _logger.debug('BuddyLeft: %s', buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="o")
@@ -440,6 +440,7 @@ class Activity(ExportedGObject):
 
     def _add_buddies(self, buddies):
         buddies = set(buddies)
+        _logger.debug("Adding buddies: %r", buddies)
 
         # disregard any who are already there
         buddies -= self._buddies
@@ -450,6 +451,8 @@ class Activity(ExportedGObject):
             buddy.add_activity(self)
             if self._valid:
                 self.BuddyJoined(buddy.object_path())
+            else:
+                _logger.debug('Suppressing BuddyJoined: activity not "valid"')
 
     def _remove_buddies(self, buddies):
         buddies = set(buddies)
@@ -462,7 +465,9 @@ class Activity(ExportedGObject):
         for buddy in buddies:
             buddy.remove_activity(self)
             if self._valid:
-                self.BuddyJoined(buddy.object_path())
+                self.BuddyLeft(buddy.object_path())
+            else:
+                _logger.debug('Suppressing BuddyLeft: activity not "valid"')
 
         if not self._buddies:
             self.emit('disappeared')
@@ -681,6 +686,10 @@ class Activity(ExportedGObject):
     def _text_channel_members_changed_cb(self, message, added, removed,
                                          local_pending, remote_pending,
                                          actor, reason):
+        _logger.debug('Text channel %u members changed: + %r, - %r, LP %r, '
+                      'RP %r, message %r, actor %r, reason %r', self._room,
+                      added, removed, local_pending, remote_pending,
+                      message, actor, reason)
         # Note: D-Bus calls this with list arguments, but after GetMembers()
         # we call it with set and tuple arguments; we cope with any iterable.
 
