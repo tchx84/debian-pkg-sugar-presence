@@ -754,10 +754,6 @@ class Activity(ExportedGObject):
         props['color'] = self._color
         props['type'] = self._type
 
-        # Add custom properties
-        for (key, value) in self._custom_props.items():
-            props[key] = value
-
         conn = self._tp.get_connection()
 
         def properties_set(e=None):
