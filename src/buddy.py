@@ -630,6 +630,15 @@ class GenericOwner(Buddy):
 
         self._set_self_activities(tp)
 
+    def remove_owner_activity(self, tp, activity_id):
+        # FIXME: this probably duplicates something else (_activities?)
+        # but for now I'll keep the same duplication as before.
+        # Equivalent code used to be in ServerPlugin.
+        id_to_act = self._activities_by_connection.setdefault(tp, {})
+        del id_to_act[activity_id]
+
+        self._set_self_activities(tp)
+
     def _set_self_activities(self, tp):
         """Forward set of joined activities to network
 
