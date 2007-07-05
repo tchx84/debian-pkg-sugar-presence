@@ -240,7 +240,8 @@ class ServerPlugin(TelepathyPlugin):
         if local_pending:
             # accept pending subscriptions
             # FIXME: do this async
-            publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
+            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                    local_pending, '')
 
         # request subscriptions from people subscribed to us if we're not
         # subscribed to them
