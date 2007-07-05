@@ -182,17 +182,6 @@ class TelepathyPlugin(gobject.GObject):
                                                    self._new_channel_cb)
         self._matches.append(m)
 
-        # hack
-        conn._valid_interfaces.add(CONN_INTERFACE_PRESENCE)
-        conn._valid_interfaces.add(CONN_INTERFACE_BUDDY_INFO)
-        conn._valid_interfaces.add(CONN_INTERFACE_ACTIVITY_PROPERTIES)
-        conn._valid_interfaces.add(CONN_INTERFACE_AVATARS)
-        conn._valid_interfaces.add(CONN_INTERFACE_ALIASING)
-
-        m = conn[CONN_INTERFACE_PRESENCE].connect_to_signal('PresenceUpdate',
-            self._presence_update_cb)
-        self._matches.append(m)
-
         self._conn = conn
         status = self._conn[CONN_INTERFACE].GetStatus()
 
@@ -404,6 +393,13 @@ class TelepathyPlugin(gobject.GObject):
 
         # FIXME: retry if getting the channel times out
 
+        interfaces = self._conn.get_valid_interfaces()
+
+        # FIXME: this is a hack, but less harmful than the previous one -
+        # the next version of telepathy-python will contain a better fix
+        for iface in self._conn[CONN_INTERFACE].GetInterfaces():
+            interfaces.add(iface)
+
         # request both handles at the same time to reduce round-trips
         pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
                 HANDLE_TYPE_LIST, ['publish', 'subscribe'])
@@ -434,8 +430,18 @@ class TelepathyPlugin(gobject.GObject):
         self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
                 HANDLE_TYPE_CONTACT, [self.self_handle])[0]
 
-        # Request presence for everyone we're subscribed to
-        self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
+        if CONN_INTERFACE_PRESENCE in self._conn:
+            # Ask to be notified about presence changes
+            m = self._conn[CONN_INTERFACE_PRESENCE].connect_to_signal(
+                    'PresenceUpdate', self._presence_update_cb)
+            self._matches.append(m)
+
+            # Request presence for everyone we're subscribed to
+            self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(
+                    subscribe_handles)
+        else:
+            _logger.warning('%s does not support Connection.Interface.'
+                            'Presence', self._conn.object_path)
 
     def start(self):
         """Start up the Telepathy networking connections
