@@ -68,15 +68,19 @@ class LinkLocalPlugin(TelepathyPlugin):
         if unique_name:
             self._have_avahi = True
             if not had_avahi:
-                _logger.info('Avahi appeared on the system bus (%s) - '
-                             'starting...', unique_name)
-                self.start()
+                if self._backoff_id > 0:
+                    _logger.info('Avahi appeared on the system bus (%s) - '
+                                 'will start when retry time is reached')
+                else:
+                    _logger.info('Avahi appeared on the system bus (%s) - '
+                                 'starting...', unique_name)
+                    self.start()
         else:
             self._have_avahi = False
             if had_avahi:
                 _logger.info('Avahi disappeared from the system bus - '
                              'stopping...')
-                self.stop()
+                self._stop()
 
     def cleanup(self):
         TelepathyPlugin.cleanup(self)
@@ -85,7 +89,7 @@ class LinkLocalPlugin(TelepathyPlugin):
         self._watch = None
 
     def _could_connect(self):
-        return self._have_avahi
+        return TelepathyPlugin._could_connect(self) and self._have_avahi
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
