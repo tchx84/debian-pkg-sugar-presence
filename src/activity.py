@@ -179,6 +179,11 @@ class Activity(ExportedGObject):
             assert self._room, self._room
             conn = self._tp.get_connection()
 
+            if CONN_INTERFACE_ACTIVITY_PROPERTIES not in conn:
+                # we should already have warned about this somewhere -
+                # certainly, don't emit a warning per activity!
+                return
+
             def got_properties_err(e):
                 _logger.warning('Failed to get initial activity properties '
                                 'for %s: %s', self._id, e)
@@ -755,6 +760,10 @@ class Activity(ExportedGObject):
         props['type'] = self._type
 
         conn = self._tp.get_connection()
+
+        if CONN_INTERFACE_ACTIVITY_PROPERTIES not in conn:
+            # we should already have warned about this somewhere
+            return
 
         def properties_set(e=None):
             if e is None:
