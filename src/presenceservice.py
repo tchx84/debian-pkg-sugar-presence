@@ -767,6 +767,11 @@ def main(test_num=0, randomize=False):
     loop = gobject.MainLoop()
     DBusGMainLoop(set_as_default=True)
 
+    if dbus.version < (0, 82, 0):
+        _logger.error('dbus-python %s is too old (0.82.0 is required). '
+                      'The PS is unlikely to work correctly.',
+                      dbus.__version__)
+
     if test_num > 0:
         from pstest import TestPresenceService
         ps = TestPresenceService(test_num, randomize)
