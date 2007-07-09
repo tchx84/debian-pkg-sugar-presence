@@ -471,6 +471,7 @@ class Activity(ExportedGObject):
 
     def _remove_buddies(self, buddies):
         buddies = set(buddies)
+        _logger.debug("Removing buddies: %r", buddies)
 
         # disregard any who are not already there
         buddies &= self._buddies
@@ -499,6 +500,9 @@ class Activity(ExportedGObject):
         This method is called by the PresenceService on the local machine.
         """
         if not self._joined:
+            self._remove_buddies((buddy,))
+        else:
+            # XXX Buddy-left starts working partially at least, if we do this anyway:
             self._remove_buddies((buddy,))
 
     def _text_channel_group_flags_changed_cb(self, added, removed):

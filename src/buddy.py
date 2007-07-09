@@ -214,6 +214,9 @@ class Buddy(ExportedGObject):
             self._icon = str(icon_data)
             self.IconChanged(self._icon)
 
+    def __repr__(self):
+        return '<ps.buddy.Buddy %s>' % self._nick
+
     def do_get_property(self, pspec):
         """Retrieve current value for the given property specifier
 
