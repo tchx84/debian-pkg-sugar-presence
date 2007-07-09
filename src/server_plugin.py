@@ -68,12 +68,12 @@ class ServerPlugin(TelepathyPlugin):
         if address:
             _logger.debug("::: valid IP4 address, conn_status %s",
                           self._conn_status)
-            # this is a no-op if starting would be inappropriate right now
-            if self._conn_status != CONNECTION_STATUS_DISCONNECTED:
+            if self._conn_status == CONNECTION_STATUS_DISCONNECTED:
+                _logger.debug("::: will connect")
                 self.start()
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
-            self._stop()
+            self.stop()
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
@@ -126,8 +126,7 @@ class ServerPlugin(TelepathyPlugin):
         return None
 
     def _could_connect(self):
-        return bool(self._ip4am.props.address and
-                    TelepathyPlugin._could_connect(self))
+        return bool(self._ip4am.props.address)
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to

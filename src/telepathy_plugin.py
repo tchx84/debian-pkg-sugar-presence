@@ -112,8 +112,8 @@ class TelepathyPlugin(gobject.GObject):
         #: The connection's status
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
 
-        #: GLib source ID indicating when we may try to reconnect
-        self._backoff_id = 0
+        #: GLib signal ID for reconnections
+        self._reconnect_id = 0
 
         #: Parameters for the connection manager
         self._account = self._get_account_info()
@@ -156,16 +156,8 @@ class TelepathyPlugin(gobject.GObject):
         raise NotImplementedError
 
     def _reconnect_cb(self):
-        """Attempt to reconnect to the server after the back-off time has
-        elapsed.
-        """
-        if self._backoff_id > 0:
-            gobject.source_remove(self._backoff_id)
-            self._backoff_id = 0
-
-        # this is a no-op unless _could_connect() returns True
+        """Attempt to reconnect to the server"""
         self.start()
-
         return False
 
     def _init_connection(self):
@@ -200,11 +192,9 @@ class TelepathyPlugin(gobject.GObject):
                 _logger.debug('%r: Connect() succeeded', self)
             def connect_error(e):
                 _logger.debug('%r: Connect() failed: %s', self, e)
-                # we don't allow ourselves to retry more often than this
-                if self._backoff_id != 0:
-                    gobject.source_remove(self._backoff_id)
-                self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
-                        self._reconnect_cb)
+                if not self._reconnect_id:
+                    self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
+                            self._reconnect_cb)
 
             self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
                                                error_handler=connect_error)
@@ -238,30 +228,26 @@ class TelepathyPlugin(gobject.GObject):
             _logger.debug("%r: connected", self)
             self._connected_cb()
         elif status == CONNECTION_STATUS_DISCONNECTED:
-            self._conn = None
-            self._stop()
+            self.stop()
             _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
                 pass
             else:
-                # Try again later. We'll detect whether we have a network
-                # connection after the retry period elapses. The fact that
-                # this timer is running also serves as a marker to indicate
-                # that we shouldn't try to go back online yet.
-                if self._backoff_id:
-                    gobject.source_remove(self._backoff_id)
-                    self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
+                # If disconnected, but still have a network connection, retry
+                # If disconnected and no network connection, do nothing here
+                # and let the IP4AddressMonitor address-changed signal handle
+                # reconnection
+                if self._could_connect() and not self._reconnect_id:
+                    self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
                             self._reconnect_cb)
 
         self.emit('status', self._conn_status, int(reason))
 
     def _could_connect(self):
-        # Don't allow connection unless the reconnect timeout has elapsed,
-        # or this is the first attempt
-        return (self._backoff_id == 0)
+        return True
 
-    def _stop(self):
+    def stop(self):
         """If we still have a connection, disconnect it"""
 
         matches = self._matches
@@ -280,12 +266,12 @@ class TelepathyPlugin(gobject.GObject):
         if self._online_contacts:
             self._contacts_offline(self._online_contacts)
 
-    def cleanup(self):
-        self._stop()
+        if self._reconnect_id > 0:
+            gobject.source_remove(self._reconnect_id)
+            self._reconnect_id = 0
 
-        if self._backoff_id > 0:
-            gobject.source_remove(self._backoff_id)
-            self._backoff_id = 0
+    def cleanup(self):
+        self.stop()
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -468,10 +454,12 @@ class TelepathyPlugin(gobject.GObject):
         otherwise initiate a connection and transfer control to
             _connect_reply_cb or _connect_error_cb
         """
-        if self._conn is not None:
-            return
 
         _logger.debug("%r: Starting up...", self)
+
+        if self._reconnect_id > 0:
+            gobject.source_remove(self._reconnect_id)
+            self._reconnect_id = 0
 
         # Only init connection if we have a valid IP address
         if self._could_connect():
