@@ -1,3 +1,5 @@
+Snapshot 6f2584d5eb
+
 * Revert: Better backoffs with connection retries... as it stopped
   the server plugin from connecting (morgs)
 
