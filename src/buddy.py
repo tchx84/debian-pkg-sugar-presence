@@ -654,7 +654,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_BUDDY_INFO not in conn:
             _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set activities')
+                            'set activities' % conn.object_path)
             return
 
         conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
@@ -687,7 +687,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_BUDDY_INFO not in conn:
             _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set current activity')
+                            'set current activity' % conn.object_path)
             return
 
         conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
@@ -702,7 +702,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_ALIASING not in conn:
             _logger.warning('%s does not support aliasing - unable to '
-                            'set my own alias')
+                            'set my own alias' % conn.object_path)
             return False
 
         conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
@@ -733,7 +733,8 @@ class GenericOwner(Buddy):
         if connected:
             if CONN_INTERFACE_BUDDY_INFO not in conn:
                 _logger.warning('%s does not support BuddyInfo - unable to '
-                                'set my own buddy properties')
+                                'set my own buddy properties' %
+                                conn.object_path)
                 return False
 
             conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
@@ -789,7 +790,8 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_AVATARS not in conn:
             _logger.warning('%s does not support Avatars - unable to '
-                            'set my own avatar on this connection')
+                            'set my own avatar on this connection' %
+                            conn.object_path)
             return
 
         m = new_md5()
