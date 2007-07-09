@@ -214,6 +214,9 @@ class Buddy(ExportedGObject):
             self._icon = str(icon_data)
             self.IconChanged(self._icon)
 
+    def __repr__(self):
+        return '<ps.buddy.Buddy %s>' % self._nick
+
     def do_get_property(self, pspec):
         """Retrieve current value for the given property specifier
 
@@ -633,6 +636,15 @@ class GenericOwner(Buddy):
 
         self._set_self_activities(tp)
 
+    def remove_owner_activity(self, tp, activity_id):
+        # FIXME: this probably duplicates something else (_activities?)
+        # but for now I'll keep the same duplication as before.
+        # Equivalent code used to be in ServerPlugin.
+        id_to_act = self._activities_by_connection.setdefault(tp, {})
+        del id_to_act[activity_id]
+
+        self._set_self_activities(tp)
+
     def _set_self_activities(self, tp):
         """Forward set of joined activities to network
 
@@ -642,7 +654,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_BUDDY_INFO not in conn:
             _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set activities')
+                            'set activities' % conn.object_path)
             return
 
         conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
@@ -675,7 +687,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_BUDDY_INFO not in conn:
             _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set current activity')
+                            'set current activity' % conn.object_path)
             return
 
         conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
@@ -690,7 +702,7 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_ALIASING not in conn:
             _logger.warning('%s does not support aliasing - unable to '
-                            'set my own alias')
+                            'set my own alias' % conn.object_path)
             return False
 
         conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
@@ -721,7 +733,8 @@ class GenericOwner(Buddy):
         if connected:
             if CONN_INTERFACE_BUDDY_INFO not in conn:
                 _logger.warning('%s does not support BuddyInfo - unable to '
-                                'set my own buddy properties')
+                                'set my own buddy properties' %
+                                conn.object_path)
                 return False
 
             conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
@@ -777,7 +790,8 @@ class GenericOwner(Buddy):
 
         if CONN_INTERFACE_AVATARS not in conn:
             _logger.warning('%s does not support Avatars - unable to '
-                            'set my own avatar on this connection')
+                            'set my own avatar on this connection' %
+                            conn.object_path)
             return
 
         m = new_md5()

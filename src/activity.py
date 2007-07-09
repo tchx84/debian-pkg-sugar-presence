@@ -137,6 +137,8 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
         self._join_is_sharing = False
+        self._leave_cb = None
+        self._leave_err_cb = None
 
         # the telepathy client
         self._tp = tp
@@ -347,7 +349,7 @@ class Activity(ExportedGObject):
                          in_signature="", out_signature="",
                          async_callbacks=('async_cb', 'async_err_cb'))
     def Join(self, async_cb, async_err_cb):
-        """DBUS method to for the local user to attempt to join the activity
+        """DBUS method for the local user to attempt to join the activity
 
         async_cb -- Callback method to be called if join attempt is successful
         async_err_cb -- Callback method to be called if join attempt is
@@ -355,6 +357,19 @@ class Activity(ExportedGObject):
 
         """
         self.join(async_cb, async_err_cb, False)
+
+    @dbus.service.method(_ACTIVITY_INTERFACE,
+                         in_signature="", out_signature="",
+                         async_callbacks=('async_cb', 'async_err_cb'))
+    def Leave(self, async_cb, async_err_cb):
+        """DBUS method to for the local user to leave the shared activity
+
+        async_cb -- Callback method to be called if join attempt is successful
+        async_err_cb -- Callback method to be called if join attempt is
+                        unsuccessful
+
+        """
+        self.leave(async_cb, async_err_cb)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="ao")
@@ -461,6 +476,7 @@ class Activity(ExportedGObject):
 
     def _remove_buddies(self, buddies):
         buddies = set(buddies)
+        _logger.debug("Removing buddies: %r", buddies)
 
         # disregard any who are not already there
         buddies &= self._buddies
@@ -489,6 +505,9 @@ class Activity(ExportedGObject):
         This method is called by the PresenceService on the local machine.
         """
         if not self._joined:
+            self._remove_buddies((buddy,))
+        else:
+            # XXX Buddy-left starts working partially at least, if we do this anyway:
             self._remove_buddies((buddy,))
 
     def _text_channel_group_flags_changed_cb(self, added, removed):
@@ -682,14 +701,56 @@ class Activity(ExportedGObject):
         return (str(conn.service_name), conn.object_path,
                 [self._text_channel.object_path])
 
-    def leave(self):
-        """Local method called when the user wants to leave the activity.
+    def leave(self, async_cb, async_err_cb):
+        """Local method for the local user to leave the shared activity.
 
-        (XXX - doesn't appear to be called anywhere!)
+        async_cb -- Callback method to be called with no parameters
+            if join attempt is successful
+        async_err_cb -- Callback method to be called with an Exception
+            parameter if join attempt is unsuccessful
 
+        The two callbacks are passed to the server_plugin ("tp") object,
+        which in turn passes them back as parameters in a callback to the
+        _left_cb method; this callback is set up within this method.
         """
-        if self._joined:
-            self._text_channel[CHANNEL_INTERFACE].Close()
+        _logger.debug("Leaving shared activity %s", self._id)
+
+        if not self._joined:
+            _logger.debug("Error: Had not joined activity %s" % self._id)
+            async_err_cb(RuntimeError("Had not joined activity %s"
+                                      % self._id))
+            return
+
+        if self._leave_cb is not None:  # XXX overkill?
+            # FIXME: or should we trigger all the attempts?
+            async_err_cb(RuntimeError('Already trying to leave activity %s'
+                                      % self._id))
+            return
+
+        self._leave_cb = async_cb
+        self._leave_err_cb = async_err_cb
+
+        self._ps.owner.remove_owner_activity(self._tp, self._id)
+
+        # This also sets self._joined = False:
+        self._text_channel[CHANNEL_INTERFACE].Close()  # XXX does this close the whole thing?
+
+        try:
+            #self._ps.owner.remove_activity(self)
+            self._remove_buddies([self._ps.owner])  # XXX XXX XXX FIXME
+        except Exception, e:
+            _logger.debug("XXX Failed to remove you from %s: %s" % (self._id, e))
+        try:
+            self._leave_cb()
+            _logger.debug("Leaving of activity %s succeeded" % self._id)
+        except Exception, e:
+            _logger.debug("Leaving of activity %s failed: %s" % (self._id, e))
+            self._leave_err_cb(e)
+
+        self._leave_cb = None
+        self._leave_err_cb = None
+
+        _logger.debug("triggered leaving on activity %s", self._id)
 
     def _text_channel_members_changed_cb(self, message, added, removed,
                                          local_pending, remote_pending,
