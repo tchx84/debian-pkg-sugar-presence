@@ -68,12 +68,12 @@ class ServerPlugin(TelepathyPlugin):
         if address:
             _logger.debug("::: valid IP4 address, conn_status %s",
                           self._conn_status)
-            if self._conn_status == CONNECTION_STATUS_DISCONNECTED:
-                _logger.debug("::: will connect")
+            # this is a no-op if starting would be inappropriate right now
+            if self._conn_status != CONNECTION_STATUS_DISCONNECTED:
                 self.start()
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
-            self.stop()
+            self._stop()
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
@@ -126,7 +126,8 @@ class ServerPlugin(TelepathyPlugin):
         return None
 
     def _could_connect(self):
-        return bool(self._ip4am.props.address)
+        return bool(self._ip4am.props.address and
+                    TelepathyPlugin._could_connect(self))
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to
@@ -240,7 +241,8 @@ class ServerPlugin(TelepathyPlugin):
         if local_pending:
             # accept pending subscriptions
             # FIXME: do this async
-            publish[CHANNEL_INTERFACE_GROUP].AddMembers(local_pending, '')
+            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                    local_pending, '')
 
         # request subscriptions from people subscribed to us if we're not
         # subscribed to them

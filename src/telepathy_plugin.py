@@ -112,8 +112,8 @@ class TelepathyPlugin(gobject.GObject):
         #: The connection's status
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
 
-        #: GLib signal ID for reconnections
-        self._reconnect_id = 0
+        #: GLib source ID indicating when we may try to reconnect
+        self._backoff_id = 0
 
         #: Parameters for the connection manager
         self._account = self._get_account_info()
@@ -156,8 +156,16 @@ class TelepathyPlugin(gobject.GObject):
         raise NotImplementedError
 
     def _reconnect_cb(self):
-        """Attempt to reconnect to the server"""
+        """Attempt to reconnect to the server after the back-off time has
+        elapsed.
+        """
+        if self._backoff_id > 0:
+            gobject.source_remove(self._backoff_id)
+            self._backoff_id = 0
+
+        # this is a no-op unless _could_connect() returns True
         self.start()
+
         return False
 
     def _init_connection(self):
@@ -182,17 +190,6 @@ class TelepathyPlugin(gobject.GObject):
                                                    self._new_channel_cb)
         self._matches.append(m)
 
-        # hack
-        conn._valid_interfaces.add(CONN_INTERFACE_PRESENCE)
-        conn._valid_interfaces.add(CONN_INTERFACE_BUDDY_INFO)
-        conn._valid_interfaces.add(CONN_INTERFACE_ACTIVITY_PROPERTIES)
-        conn._valid_interfaces.add(CONN_INTERFACE_AVATARS)
-        conn._valid_interfaces.add(CONN_INTERFACE_ALIASING)
-
-        m = conn[CONN_INTERFACE_PRESENCE].connect_to_signal('PresenceUpdate',
-            self._presence_update_cb)
-        self._matches.append(m)
-
         self._conn = conn
         status = self._conn[CONN_INTERFACE].GetStatus()
 
@@ -203,9 +200,11 @@ class TelepathyPlugin(gobject.GObject):
                 _logger.debug('%r: Connect() succeeded', self)
             def connect_error(e):
                 _logger.debug('%r: Connect() failed: %s', self, e)
-                if not self._reconnect_id:
-                    self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
-                            self._reconnect_cb)
+                # we don't allow ourselves to retry more often than this
+                if self._backoff_id != 0:
+                    gobject.source_remove(self._backoff_id)
+                self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
+                        self._reconnect_cb)
 
             self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
                                                error_handler=connect_error)
@@ -239,26 +238,30 @@ class TelepathyPlugin(gobject.GObject):
             _logger.debug("%r: connected", self)
             self._connected_cb()
         elif status == CONNECTION_STATUS_DISCONNECTED:
-            self.stop()
+            self._conn = None
+            self._stop()
             _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
                 pass
             else:
-                # If disconnected, but still have a network connection, retry
-                # If disconnected and no network connection, do nothing here
-                # and let the IP4AddressMonitor address-changed signal handle
-                # reconnection
-                if self._could_connect() and not self._reconnect_id:
-                    self._reconnect_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
+                # Try again later. We'll detect whether we have a network
+                # connection after the retry period elapses. The fact that
+                # this timer is running also serves as a marker to indicate
+                # that we shouldn't try to go back online yet.
+                if self._backoff_id:
+                    gobject.source_remove(self._backoff_id)
+                    self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
                             self._reconnect_cb)
 
         self.emit('status', self._conn_status, int(reason))
 
     def _could_connect(self):
-        return True
+        # Don't allow connection unless the reconnect timeout has elapsed,
+        # or this is the first attempt
+        return (self._backoff_id == 0)
 
-    def stop(self):
+    def _stop(self):
         """If we still have a connection, disconnect it"""
 
         matches = self._matches
@@ -277,12 +280,12 @@ class TelepathyPlugin(gobject.GObject):
         if self._online_contacts:
             self._contacts_offline(self._online_contacts)
 
-        if self._reconnect_id > 0:
-            gobject.source_remove(self._reconnect_id)
-            self._reconnect_id = 0
-
     def cleanup(self):
-        self.stop()
+        self._stop()
+
+        if self._backoff_id > 0:
+            gobject.source_remove(self._backoff_id)
+            self._backoff_id = 0
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -404,6 +407,13 @@ class TelepathyPlugin(gobject.GObject):
 
         # FIXME: retry if getting the channel times out
 
+        interfaces = self._conn.get_valid_interfaces()
+
+        # FIXME: this is a hack, but less harmful than the previous one -
+        # the next version of telepathy-python will contain a better fix
+        for iface in self._conn[CONN_INTERFACE].GetInterfaces():
+            interfaces.add(iface)
+
         # request both handles at the same time to reduce round-trips
         pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
                 HANDLE_TYPE_LIST, ['publish', 'subscribe'])
@@ -434,8 +444,18 @@ class TelepathyPlugin(gobject.GObject):
         self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
                 HANDLE_TYPE_CONTACT, [self.self_handle])[0]
 
-        # Request presence for everyone we're subscribed to
-        self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(subscribe_handles)
+        if CONN_INTERFACE_PRESENCE in self._conn:
+            # Ask to be notified about presence changes
+            m = self._conn[CONN_INTERFACE_PRESENCE].connect_to_signal(
+                    'PresenceUpdate', self._presence_update_cb)
+            self._matches.append(m)
+
+            # Request presence for everyone we're subscribed to
+            self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(
+                    subscribe_handles)
+        else:
+            _logger.warning('%s does not support Connection.Interface.'
+                            'Presence', self._conn.object_path)
 
     def start(self):
         """Start up the Telepathy networking connections
@@ -448,12 +468,10 @@ class TelepathyPlugin(gobject.GObject):
         otherwise initiate a connection and transfer control to
             _connect_reply_cb or _connect_error_cb
         """
+        if self._conn is not None:
+            return
 
         _logger.debug("%r: Starting up...", self)
-
-        if self._reconnect_id > 0:
-            gobject.source_remove(self._reconnect_id)
-            self._reconnect_id = 0
 
         # Only init connection if we have a valid IP address
         if self._could_connect():

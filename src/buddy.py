@@ -566,6 +566,9 @@ class Buddy(ExportedGObject):
         conn = tp.get_connection()
         handle, identifier = self._handles[tp]
 
+        if CONN_INTERFACE_AVATARS not in conn:
+            return
+
         if icon is None:
             icon = buddy_icon_cache.get_icon(conn.object_path, identifier,
                                              new_avatar_token)
@@ -648,6 +651,12 @@ class GenericOwner(Buddy):
         uses SetActivities on BuddyInfo channel
         """
         conn = tp.get_connection()
+
+        if CONN_INTERFACE_BUDDY_INFO not in conn:
+            _logger.warning('%s does not support BuddyInfo - unable to '
+                            'set activities')
+            return
+
         conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
                 self._activities_by_connection[tp].iteritems(),
                 reply_handler=_noop,
@@ -675,6 +684,12 @@ class GenericOwner(Buddy):
         _logger.debug("Setting current activity to '%s' (handle %s)",
                       cur_activity, cur_activity_handle)
         conn = tp.get_connection()
+
+        if CONN_INTERFACE_BUDDY_INFO not in conn:
+            _logger.warning('%s does not support BuddyInfo - unable to '
+                            'set current activity')
+            return
+
         conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
                 cur_activity_handle,
                 reply_handler=_noop,
@@ -684,6 +699,12 @@ class GenericOwner(Buddy):
     def _set_self_alias(self, tp):
         self_handle = self._handles[tp][0]
         conn = tp.get_connection()
+
+        if CONN_INTERFACE_ALIASING not in conn:
+            _logger.warning('%s does not support aliasing - unable to '
+                            'set my own alias')
+            return False
+
         conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
                 reply_handler=_noop,
                 error_handler=lambda e:
@@ -710,6 +731,11 @@ class GenericOwner(Buddy):
             del props['ip4-address']
 
         if connected:
+            if CONN_INTERFACE_BUDDY_INFO not in conn:
+                _logger.warning('%s does not support BuddyInfo - unable to '
+                                'set my own buddy properties')
+                return False
+
             conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
                     reply_handler=_noop,
                     error_handler=lambda e:
@@ -760,6 +786,11 @@ class GenericOwner(Buddy):
     def _set_self_avatar(self, tp):
         conn = tp.get_connection()
         icon_data = self._icon
+
+        if CONN_INTERFACE_AVATARS not in conn:
+            _logger.warning('%s does not support Avatars - unable to '
+                            'set my own avatar on this connection')
+            return
 
         m = new_md5()
         m.update(icon_data)
