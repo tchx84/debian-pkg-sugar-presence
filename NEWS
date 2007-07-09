@@ -1,3 +1,6 @@
+* Revert: Better backoffs with connection retries... as it stopped
+  the server plugin from connecting (morgs)
+
 Snapshot e26e3c0294
 
 * Better backoffs with connection retries to avoid hogging the CPU (smcv)
