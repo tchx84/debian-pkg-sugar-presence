@@ -1,0 +1,6 @@
+* Better backoffs with connection retries to avoid hogging the CPU (smcv)
+* Cope with CMs with no presence interface (smcv)
+* Warn if dbus-python is older than 0.82.0 (smcv)
+* Implement PS calls to leave a shared activity (morgs)
+* Fix buddy-left signals (morgs)
+* Fixed regressions from adding salut (smcv, morgs)
