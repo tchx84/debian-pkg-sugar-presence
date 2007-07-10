@@ -1,3 +1,6 @@
+* Reapply (with fix) the patch for Better backoffs with connection
+  retries to avoid hogging the CPU (morgs)
+
 Snapshot 6f2584d5eb
 
 * Revert: Better backoffs with connection retries... as it stopped
