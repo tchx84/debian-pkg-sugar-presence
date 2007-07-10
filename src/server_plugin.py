@@ -66,10 +66,10 @@ class ServerPlugin(TelepathyPlugin):
     def _ip4_address_changed_cb(self, ip4am, address):
         _logger.debug("::: IP4 address now %s", address)
         if address:
-            _logger.debug("::: valid IP4 address, conn_status %s",
+            _logger.debug("::: valid IP4 address, conn_status %s" %
                           self._conn_status)
             # this is a no-op if starting would be inappropriate right now
-            if self._conn_status != CONNECTION_STATUS_DISCONNECTED:
+            if self._conn_status != CONNECTION_STATUS_CONNECTED:
                 self.start()
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
