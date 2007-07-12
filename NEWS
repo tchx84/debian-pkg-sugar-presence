@@ -1,3 +1,5 @@
+Snapshot b539f146e9
+
 * Disable avatars. The cache was causing high cpu usage at startup (smcv) 
 
 Snapshot e9c851eb8f
