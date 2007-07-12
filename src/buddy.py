@@ -563,6 +563,11 @@ class Buddy(ExportedGObject):
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
+
+        # FIXME: Avatars have been disabled for Trial-2 due to performance
+        # issues in the avatar cache. Revisit this afterwards
+        return
+
         conn = tp.get_connection()
         handle, identifier = self._handles[tp]
 
@@ -785,6 +790,10 @@ class GenericOwner(Buddy):
             self._set_self_avatar(tp)
 
     def _set_self_avatar(self, tp):
+        # FIXME: Avatars have been disabled for Trial-2 due to performance
+        # issues in the avatar cache. Revisit this afterwards
+        return
+
         conn = tp.get_connection()
         icon_data = self._icon
 

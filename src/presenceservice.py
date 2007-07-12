@@ -206,7 +206,11 @@ class PresenceService(ExportedGObject):
             _logger.warning('Connection %s does not support OLPC buddy info',
                             conn.object_path)
 
-        if CONN_INTERFACE_AVATARS in conn:
+        if 1:
+            # FIXME: Avatars have been disabled for Trial-2 due to performance
+            # issues in the avatar cache. Revisit this afterwards
+            pass
+        elif CONN_INTERFACE_AVATARS in conn:
             def avatar_retrieved(contact, avatar_token, avatar, mime_type):
                 self._avatar_updated(tp, contact, avatar_token, avatar,
                                      mime_type)
@@ -311,7 +315,11 @@ class PresenceService(ExportedGObject):
         for handle in handles:
             self._queue_contact_online(tp, handle)
 
-        if CONN_INTERFACE_AVATARS in conn:
+        if 1:
+            # FIXME: Avatars have been disabled for Trial-2 due to performance
+            # issues in the avatar cache. Revisit this afterwards
+            pass
+        elif CONN_INTERFACE_AVATARS in conn:
             def got_avatar_tokens(tokens):
                 gobject.idle_add(self._run_contacts_online_queue)
                 for contact, token in izip(handles, tokens):
