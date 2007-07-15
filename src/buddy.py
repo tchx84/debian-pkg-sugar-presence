@@ -335,6 +335,8 @@ class Buddy(ExportedGObject):
         # the Owner can't disappear - that would be silly
         if not self._handles and not self._owner:
             self.emit('disappeared')
+            # Stop exporting a dbus service
+            self.remove_from_connection()
 
     @dbus.service.signal(_BUDDY_INTERFACE, signature='sou')
     def TelepathyHandleRemoved(self, tp_conn_name, tp_conn_path, handle):

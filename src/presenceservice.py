@@ -416,6 +416,7 @@ class PresenceService(ExportedGObject):
     def _buddy_disappeared_cb(self, buddy):
         if buddy.props.valid:
             self._buddy_validity_changed_cb(buddy, False)
+        self._buddies.pop(buddy.props.objid, None)
 
     def _contacts_offline(self, tp, handles):
         for handle in handles:
