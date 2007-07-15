@@ -1,3 +1,8 @@
+* Hook up to owner current activity change signal so current activity changes
+  get propagated
+* Fix re-appearance of buddies by actually forgetting about the buddy completely
+  when a buddy disappears
+
 Snapshot b539f146e9
 
 * Disable avatars. The cache was causing high cpu usage at startup (smcv) 
