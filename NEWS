@@ -1,3 +1,5 @@
+Snapshot 650c323462
+
 * Don't send None over D-Bus when updating current activity (danw)
 * Make locally-originated shared activities disappear when everyone leaves (dcbw)
 
