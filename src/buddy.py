@@ -450,6 +450,11 @@ class Buddy(ExportedGObject):
         calls LeftActivity
         """
         actid = activity.props.id
+
+        if self.props.current_activity == actid:
+            # set current activity to none
+            self.set_properties({_PROP_CURACT: None})
+
         if not self._activities.has_key(actid):
             return
         activity.disconnect(self._activity_sigids[actid])
