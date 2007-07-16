@@ -738,6 +738,7 @@ class PresenceService(ExportedGObject):
                             name=name, color=color, local=True)
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
+        activity.connect("disappeared", self._activity_disappeared_cb)
         self._activities_by_id[actid] = activity
 
         def activity_shared():
