@@ -1,3 +1,6 @@
+* Don't send None over D-Bus when updating current activity (danw)
+* Make locally-originated shared activities disappear when everyone leaves (dcbw)
+
 Snapshot 6c86d827b5
 
 * Set Buddy current-activity property to none if leaving the current activity
