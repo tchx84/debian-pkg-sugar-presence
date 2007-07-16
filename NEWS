@@ -1,3 +1,4 @@
+* Set Buddy current-activity property to none if leaving the current activity
 * Hook up to owner current activity change signal so current activity changes
   get propagated
 * Fix re-appearance of buddies by actually forgetting about the buddy completely
