@@ -692,6 +692,7 @@ class GenericOwner(Buddy):
                 # connection - need to make sure clients are OK with this
                 # (at the moment, PS isn't!)
                 cur_activity = ""
+                cur_activity_handle = 0
 
         _logger.debug("Setting current activity to '%s' (handle %s)",
                       cur_activity, cur_activity_handle)
