@@ -1,3 +1,5 @@
+Snapshot 79251459e5
+
 * Return buddy properties as a byte array, not an array of bytes (dcbw)
 * Don't list the owner twice in GetBuddies method (danw)
 
