@@ -1,3 +1,6 @@
+* Return buddy properties as a byte array, not an array of bytes (dcbw)
+* Don't list the owner twice in GetBuddies method (danw)
+
 Snapshot 650c323462
 
 * Don't send None over D-Bus when updating current activity (danw)
