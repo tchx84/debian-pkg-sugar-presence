@@ -596,7 +596,7 @@ class PresenceService(ExportedGObject):
         for handles_buddies in self._handles_buddies.itervalues():
             for buddy in handles_buddies.itervalues():
                 if buddy.props.valid:
-                    ret.add(buddy.object_path())
+                    ret.add(buddy)
         return ret
 
     @dbus.service.method(_PRESENCE_INTERFACE,
