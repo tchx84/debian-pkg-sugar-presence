@@ -28,7 +28,8 @@ from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
     CHANNEL_INTERFACE_GROUP)
 from telepathy.constants import (HANDLE_TYPE_CONTACT,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
-    CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES)
+    CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
+    CONNECTION_STATUS_REASON_NAME_IN_USE)
 
 # Presence Service local modules
 import psutils
@@ -229,7 +230,7 @@ class ServerPlugin(TelepathyPlugin):
         return ret
 
     def _connected_cb(self):
-        if self._account['register']:
+        if not self._owner.get_registered():
             # we successfully register this account
             self._owner.set_registered(True)
 
@@ -270,3 +271,22 @@ class ServerPlugin(TelepathyPlugin):
             if added:
                 self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                         added, '')
+
+    def _handle_connection_status_change(self, status, reason):
+        """Override TelepathyPlugin implementation to manage connection errors
+        due to registration problem. So, if for any reason the registered flag
+        was not set in the config file but the account was registered, we don't
+        fail to connect (see ticket #2062)."""
+        if status == self._conn_status:
+            return
+
+        if (status == CONNECTION_STATUS_DISCONNECTED and
+            reason == CONNECTION_STATUS_REASON_NAME_IN_USE and
+            self._account['register']):
+            _logger.debug('This account is already registered. Connect to it')
+            self._account['register'] = False
+            self._stop()
+            self._init_connection()
+            return
+
+        TelepathyPlugin._handle_connection_status_change(self, status, reason)
