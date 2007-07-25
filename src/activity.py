@@ -698,8 +698,10 @@ class Activity(ExportedGObject):
         """
         conn = self._tp.get_connection()
         # FIXME add tubes and others channels
-        return (str(conn.service_name), conn.object_path,
-                [self._text_channel.object_path])
+        channels = []
+        if self._text_channel is not None:
+            channels.append(self._text_channel.object_path)
+        return (str(conn.service_name), conn.object_path, channels)
 
     def leave(self, async_cb, async_err_cb):
         """Local method for the local user to leave the shared activity.
