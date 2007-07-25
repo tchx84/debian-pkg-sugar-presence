@@ -412,6 +412,7 @@ class Buddy(ExportedGObject):
             conn = plugin.get_connection()
             ret.append((str(conn.service_name), conn.object_path,
                         self._handles[plugin][0]))
+        return ret
 
     # methods
     def object_path(self):
