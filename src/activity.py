@@ -532,6 +532,7 @@ class Activity(ExportedGObject):
             raise RuntimeError("Plugin returned invalid text channel")
 
         self._text_channel = text_channel
+        self.NewChannel(text_channel.object_path)
         self._clean_up_matches()
 
         m = self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
