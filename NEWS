@@ -1,3 +1,7 @@
+* Text channel creation minor fixes (smcv)
+* #2062: Handle trying to register if the server says already registered
+  (cassidy)
+
 Snapshot 79251459e5
 
 * Return buddy properties as a byte array, not an array of bytes (dcbw)
