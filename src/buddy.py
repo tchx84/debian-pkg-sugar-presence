@@ -25,7 +25,6 @@ except ImportError:
     from md5 import new as new_md5
 
 import gobject
-import gtk
 import dbus
 import dbus.proxies
 import dbus.service
@@ -68,32 +67,35 @@ def _buddy_icon_save_cb(buf, data):
     return True
 
 def _get_buddy_icon_at_size(icon, maxw, maxh, maxsize):
-    loader = gtk.gdk.PixbufLoader()
-    loader.write(icon)
-    loader.close()
-    unscaled_pixbuf = loader.get_pixbuf()
-    del loader
+# FIXME Do not import gtk in the presence service,
+# it uses a lot of memory and slow down startup.
+#    loader = gtk.gdk.PixbufLoader()
+#    loader.write(icon)
+#    loader.close()
+#    unscaled_pixbuf = loader.get_pixbuf()
+#    del loader
+#
+#    pixbuf = unscaled_pixbuf.scale_simple(maxw, maxh, gtk.gdk.INTERP_BILINEAR)
+#    del unscaled_pixbuf
+#
+#    data = [""]
+#    quality = 90
+#    img_size = maxsize + 1
+#    while img_size > maxsize:
+#        data = [""]
+#        pixbuf.save_to_callback(_buddy_icon_save_cb, "jpeg",
+#                                {"quality":"%d" % quality}, data)
+#        quality -= 10
+#        img_size = len(data[0])
+#    del pixbuf
+#
+#    if img_size > maxsize:
+#        data = [""]
+#        raise RuntimeError("could not size image less than %d bytes" % maxsize)
+#
+#    return str(data[0])
 
-    pixbuf = unscaled_pixbuf.scale_simple(maxw, maxh, gtk.gdk.INTERP_BILINEAR)
-    del unscaled_pixbuf
-
-    data = [""]
-    quality = 90
-    img_size = maxsize + 1
-    while img_size > maxsize:
-        data = [""]
-        pixbuf.save_to_callback(_buddy_icon_save_cb, "jpeg",
-                                {"quality":"%d" % quality}, data)
-        quality -= 10
-        img_size = len(data[0])
-    del pixbuf
-
-    if img_size > maxsize:
-        data = [""]
-        raise RuntimeError("could not size image less than %d bytes" % maxsize)
-
-    return str(data[0])
-
+    return ""
 
 class Buddy(ExportedGObject):
     """Person on the network (tracks properties and shared activites)
@@ -845,11 +847,16 @@ class GenericOwner(Buddy):
         if maxsize > 0 and size > maxsize:
             size = maxsize
 
-        img_data = _get_buddy_icon_at_size(icon_data, width, height, size)
-        conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
-                reply_handler=set_self_avatar_cb,
-                error_handler=lambda e:
-                    _logger.warning('Error setting avatar: %s', e))
+        if 1:
+            # FIXME: Avatars have been disabled for Trial-2 due to performance
+            # issues in the avatar cache. Revisit this afterwards
+            pass
+        else:
+            img_data = _get_buddy_icon_at_size(icon_data, width, height, size)
+            conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
+                    reply_handler=set_self_avatar_cb,
+                    error_handler=lambda e:
+                        _logger.warning('Error setting avatar: %s', e))
 
     def _property_changed(self, changed_props):
         for tp in self._handles.iterkeys():
