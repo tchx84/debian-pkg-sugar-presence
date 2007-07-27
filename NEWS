@@ -1,3 +1,5 @@
+Snapshot ce62f752b2
+
 * Text channel creation minor fixes (smcv)
 * #2062: Handle trying to register if the server says already registered
   (cassidy)
