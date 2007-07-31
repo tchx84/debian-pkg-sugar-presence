@@ -1,3 +1,5 @@
+Snapshot bc7fc5f02d
+
 * Cope with arbitrary Unicode in nicknames, bug#2611 (smcv)
 
 Snapshot ce62f752b2
