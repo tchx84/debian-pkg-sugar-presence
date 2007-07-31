@@ -148,7 +148,8 @@ class Buddy(ExportedGObject):
                               gobject.PARAM_CONSTRUCT_ONLY |
                               gobject.PARAM_READWRITE),
         _PROP_ICON         : (object, None, None, gobject.PARAM_READABLE),
-        _PROP_NICK         : (str, None, None, None,
+        # Must be a unicode object or None
+        _PROP_NICK         : (object, None, None,
                               gobject.PARAM_CONSTRUCT_ONLY |
                               gobject.PARAM_READWRITE),
         _PROP_COLOR        : (str, None, None, None,
@@ -260,6 +261,8 @@ class Buddy(ExportedGObject):
                 self._icon = str(value)
                 self.IconChanged(self._icon)
         elif pspec.name == _PROP_NICK:
+            if value is not None:
+                value = unicode(value)
             self._nick = value
         elif pspec.name == _PROP_COLOR:
             self._color = value
@@ -486,6 +489,8 @@ class Buddy(ExportedGObject):
         changed_props = {}
         if _PROP_NICK in properties:
             nick = properties[_PROP_NICK]
+            if nick is not None:
+                nick = unicode(nick)
             if nick != self._nick:
                 self._nick = nick
                 changed_props[_PROP_NICK] = nick

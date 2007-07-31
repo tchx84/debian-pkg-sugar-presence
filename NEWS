@@ -1,3 +1,5 @@
+* Cope with arbitrary Unicode in nicknames, bug#2611 (smcv)
+
 Snapshot ce62f752b2
 
 * Text channel creation minor fixes (smcv)
