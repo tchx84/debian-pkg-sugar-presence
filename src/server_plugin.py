@@ -146,7 +146,9 @@ class ServerPlugin(TelepathyPlugin):
         For the moment we assume that the test server, olpc.collabora.co.uk,
         does this verification.
         """
-        return (hostname == 'olpc.collabora.co.uk')
+        # FIXME: just trusting the owner's server for now
+        server = self._owner.get_server()
+        return (server and len(server) and hostname == server)
 
     def identify_contacts(self, tp_chan, handles, identifiers=None):
         """Work out the "best" unique identifier we can for the given handles,

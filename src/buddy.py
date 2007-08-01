@@ -630,7 +630,7 @@ class GenericOwner(Buddy):
         calls Buddy.__init__
         """
         self._ps = ps
-        self._server = kwargs.pop("server", "olpc.collabora.co.uk")
+        self._server = kwargs.pop("server", None)
         self._key_hash = kwargs.pop("key_hash", None)
         self._registered = kwargs.pop("registered", False)
 

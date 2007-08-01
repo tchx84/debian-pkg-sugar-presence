@@ -108,8 +108,12 @@ class PresenceService(ExportedGObject):
         if 'disable-gabble' in debug_flags:
             self._server_plugin = None
         else:
-            self._server_plugin = ServerPlugin(self._registry, self._owner)
-            self._plugins.append(self._server_plugin)
+            server = self._owner.get_server()
+            if server and len(server):
+                self._server_plugin = ServerPlugin(self._registry, self._owner)
+                self._plugins.append(self._server_plugin)
+            else:
+                self._server_plugin = None
         if 'disable-salut' in debug_flags:
             self._ll_plugin = None
         else:
