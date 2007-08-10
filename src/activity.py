@@ -729,9 +729,7 @@ class Activity(ExportedGObject):
         self._leave_cb = async_cb
         self._leave_err_cb = async_err_cb
         self._ps.owner.remove_owner_activity(self._tp, self._id)
-        # This also sets self._joined = False:
         self._text_channel[CHANNEL_INTERFACE].Close()
-
 
     def _text_channel_members_changed_cb(self, message, added, removed,
                                          local_pending, remote_pending,
@@ -791,21 +789,21 @@ class Activity(ExportedGObject):
         self._joined = False
         self._self_handle = None
         self._text_channel = None
+        _logger.debug('Text channel closed')
         try:
-            #self._ps.owner.remove_activity(self)
             self._remove_buddies([self._ps.owner])
         except Exception, e:
             _logger.debug(
                 "Failed to remove you from %s: %s" % (self._id, e))
-        try:
-            self._leave_cb()
-            _logger.debug("Leaving of activity %s succeeded" % self._id)
-        except Exception, e:
-            _logger.debug("Leaving of activity %s failed: %s" % (self._id, e))
-            self._leave_err_cb(e)
+        if self._leave_cb and self._leave_err_cb:
+            try:
+                self._leave_cb()
+                _logger.debug("Leaving of activity %s succeeded" % self._id)
+            except Exception, e:
+                _logger.debug("Leaving of activity %s failed: %s" % (self._id, e))
+                self._leave_err_cb(e)
         self._leave_cb = None
         self._leave_err_cb = None
-        _logger.debug("triggered leaving on activity %s", self._id)
 
     def send_properties(self):
         """Tells the Telepathy server what the properties of this activity are.
