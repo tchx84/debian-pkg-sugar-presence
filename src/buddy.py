@@ -378,8 +378,7 @@ class Buddy(ExportedGObject):
         return acts
 
     @dbus.service.method(_BUDDY_INTERFACE,
-                        in_signature="", out_signature="a{sv}",
-                        byte_arrays=True)
+                        in_signature="", out_signature="a{sv}")
     def GetProperties(self):
         """Retrieve set of Buddy's properties
 
