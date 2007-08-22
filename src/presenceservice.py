@@ -708,7 +708,22 @@ class PresenceService(ExportedGObject):
             out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
     def ShareActivity(self, actid, atype, name, properties, async_cb,
                       async_err_cb):
-        self._share_activity(actid, atype, name, properties,
+        _logger.warning('ShareActivity deprecated, use AdvertiseActivity')
+        self._share_activity(actid, atype, name, properties, False,
+                             async_cb, async_err_cb)
+
+    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="sssa{sv}",
+            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
+    def AdvertiseActivity(self, actid, atype, name, properties, async_cb,
+                          async_err_cb):
+        self._share_activity(actid, atype, name, properties, False,
+                             async_cb, async_err_cb)
+
+    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="sssa{sv}",
+            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
+    def InviteActivity(self, actid, atype, name, properties, async_cb,
+                      async_err_cb):
+        self._share_activity(actid, atype, name, properties, True,
                              async_cb, async_err_cb)
 
     def _get_preferred_plugin(self):
@@ -730,10 +745,20 @@ class PresenceService(ExportedGObject):
         for tp in self._handles_buddies:
             tp.cleanup()
 
-    def _share_activity(self, actid, atype, name, properties, async_cb,
-                        async_err_cb):
+    def _share_activity(self, actid, atype, name, private, 
+                        async_cb, async_err_cb):
+        """Create the shared Activity.
+
+        actid -- XXX
+        atype -- XXX
+        name -- XXX
+        private -- bool: True for by-invitation-only sharing,
+            False for publicly advertised sharing
+        async_cb -- function: Callback for success
+        async_err_cb -- function: Callback for failure
+        """
         objid = self._get_next_object_id()
-        # FIXME: is the preferred Telepathy plugin always the right way to
+        # XXX: is the preferred Telepathy plugin always the right way to
         # share the activity?
         color = self._owner.props.color
         activity = Activity(self._session_bus, objid, self,
@@ -750,7 +775,7 @@ class PresenceService(ExportedGObject):
             self._activities_by_handle[tp][room] = activity
             async_cb(activity.object_path())
 
-        activity.join(activity_shared, async_err_cb, True)
+        activity.join(activity_shared, async_err_cb, True, private)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already
@@ -765,8 +790,8 @@ class PresenceService(ExportedGObject):
                           activity.props.id)
         else:
             self.ActivityDisappeared(activity.object_path())
-            _logger.debug("Activity disappeared: %s (%s)", activity.props.name,
-                          activity.props.id)
+            _logger.debug("Activity disappeared: %s (%s)", 
+                          activity.props.name, activity.props.id)
 
     def _activity_properties_changed(self, tp, act_handle, props):
         activity = self._activities_by_handle[tp].get(act_handle)

@@ -137,6 +137,7 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
         self._join_is_sharing = False
+        self._private = True
         self._leave_cb = None
         self._leave_err_cb = None
 
@@ -603,11 +604,10 @@ class Activity(ExportedGObject):
     def _join_activity_channel_props_listed_cb(self, channel,
                                                prop_specs):
         props = {
-            'anonymous': False,         # otherwise buddy resolution breaks
-            'invite-only': False,       # XXX: should be True in future
-            #'name': ...                # XXX: set from activity name?
-            'persistent': False,        # vanish when there are no members
-            'private': False,           # XXX: should be True unless public
+            'anonymous': False,   # otherwise buddy resolution breaks
+            'invite-only': self._private,
+            'persistent': False,  # vanish when there are no members
+            'private': self._private,
         }
         props_to_set = []
         for ident, name, sig, flags in prop_specs:
@@ -648,13 +648,15 @@ class Activity(ExportedGObject):
             reply_handler=self._join_activity_create_channel_cb,
             error_handler=self._join_failed_cb)
 
-    def join(self, async_cb, async_err_cb, sharing):
+    def join(self, async_cb, async_err_cb, sharing, private=True):
         """Local method for the local user to attempt to join the activity.
 
         async_cb -- Callback method to be called with no parameters
             if join attempt is successful
         async_err_cb -- Callback method to be called with an Exception
             parameter if join attempt is unsuccessful
+        sharing -- bool: True if sharing, False if joining
+        private -- bool: True if by invitation, False if Advertising
 
         The two callbacks are passed to the server_plugin ("tp") object,
         which in turn passes them back as parameters in a callback to the
@@ -676,10 +678,12 @@ class Activity(ExportedGObject):
         self._join_cb = async_cb
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
+        self._private = private
 
         if self._room:
             # we're probably sharing a local activity.
             # FIXME: assert that this is the case?
+            # (try this:) assert self._local
             self._join_activity_got_handles_cb((self._room,))
         else:
             conn = self._tp.get_connection()
