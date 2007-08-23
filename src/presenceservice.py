@@ -745,13 +745,14 @@ class PresenceService(ExportedGObject):
         for tp in self._handles_buddies:
             tp.cleanup()
 
-    def _share_activity(self, actid, atype, name, private, 
+    def _share_activity(self, actid, atype, name, properties, private, 
                         async_cb, async_err_cb):
         """Create the shared Activity.
 
         actid -- XXX
         atype -- XXX
         name -- XXX
+        properties -- XXX
         private -- bool: True for by-invitation-only sharing,
             False for publicly advertised sharing
         async_cb -- function: Callback for success
