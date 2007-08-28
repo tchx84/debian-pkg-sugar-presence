@@ -817,6 +817,7 @@ class Activity(ExportedGObject):
         props['name'] = self._actname
         props['color'] = self._color
         props['type'] = self._type
+        props['private'] = self._private
 
         conn = self._tp.get_connection()
 
