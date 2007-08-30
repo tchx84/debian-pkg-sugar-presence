@@ -1,3 +1,6 @@
+* Support invitations and non-public activities (smcv)
+* Support mutable name/tags/color/private properties (smcv)
+
 Snapshot 1c58a0be88
 
 * Update LinkLocal plugin's protocol to "local-xmpp"
