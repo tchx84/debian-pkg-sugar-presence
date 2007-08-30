@@ -539,14 +539,20 @@ class PresenceService(ExportedGObject):
 
             activity.buddy_apparently_left(buddy)
 
-    def _activity_invitation(self, tp, act_handle):
+    def _activity_invitation(self, tp, channel, act_handle, actor, message):
         activity = self._activities_by_handle[tp].get(act_handle)
         if activity is None:
             # FIXME: we should synthesize an activity somehow, for the case of
-            # an invite to a non-public room
-            pass
+            # an invite to a non-activity
+            _logger.debug('Invited to unknown activity: handle %u on %s, '
+                          'ignoring', act_handle, tp)
+        elif actor == 0:
+            # don't know who invited us? not much we can do about that, then
+            _logger.debug('Invited to activity by unknown contact, ignoring')
         else:
-            self.ActivityInvitation(activity.object_path())
+            buddy = self.map_handles_to_buddies(tp, channel, (actor,))[actor]
+            self.ActivityInvitation(activity.object_path(),
+                                    buddy.object_path(), message)
 
     def _private_invitation(self, tp, chan_path):
         conn = tp.get_connection()
@@ -569,8 +575,8 @@ class PresenceService(ExportedGObject):
     def BuddyDisappeared(self, buddy):
         pass
 
-    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
-    def ActivityInvitation(self, activity):
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="oos")
+    def ActivityInvitation(self, activity, buddy, message):
         pass
 
     @dbus.service.signal(PRESENCE_INTERFACE, signature="soo")

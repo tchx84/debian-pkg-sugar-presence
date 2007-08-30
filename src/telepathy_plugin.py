@@ -27,6 +27,7 @@ from telepathy.constants import (CONNECTION_STATUS_DISCONNECTED,
     CONNECTION_STATUS_CONNECTING, CONNECTION_STATUS_CONNECTED,
     CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED,
     CONNECTION_STATUS_REASON_NONE_SPECIFIED,
+    CHANNEL_GROUP_CHANGE_REASON_INVITED,
     HANDLE_TYPE_CONTACT, HANDLE_TYPE_ROOM, HANDLE_TYPE_LIST)
 from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CHANNEL_TYPE_STREAMED_MEDIA, CHANNEL_INTERFACE_GROUP,
@@ -62,8 +63,11 @@ class TelepathyPlugin(gobject.GObject):
         'activity-invitation':
             # We were invited to join an activity
             # args:
+            #   activity room: Channel
             #   activity room handle: int or long
-            (gobject.SIGNAL_RUN_FIRST, None, [object]),
+            #   inviter contact handle: int or long
+            #   message: unicode
+            (gobject.SIGNAL_RUN_FIRST, None, [object] * 4),
         'private-invitation':
             # We were invited to join a chat or a media call
             # args:
@@ -378,17 +382,34 @@ class TelepathyPlugin(gobject.GObject):
         """
         if (handle_type == HANDLE_TYPE_ROOM and
             channel_type == CHANNEL_TYPE_TEXT):
+
             def ready(channel):
-                def got_all_members(current, local_pending, remote_pending):
-                    if local_pending:
-                        self.emit('activity-invitation', handle)
-                def got_all_members_err(e):
-                    _logger.debug('Unable to get channel members for %s:',
-                                 object_path, exc_info=1)
+                # workaround for odd behaviour of nested scopes
+                room_self = []
+
+                def got_lpwi(info):
+                    for invitee, actor, reason, message in info:
+                        if ((invitee == room_self[0]
+                             or invitee == self.self_handle)
+                            and reason == CHANNEL_GROUP_CHANGE_REASON_INVITED):
+                            self.emit('activity-invitation', channel, handle,
+                                      actor, message)
+                def got_lpwi_err(e):
+                    _logger.warning('Unable to get channel members for %s:',
+                                    object_path, exc_info=1)
+
+                def got_self_handle(self_handle):
+                    room_self.append(self_handle)
+                    group.GetLocalPendingMembersWithInfo(
+                            reply_handler=got_lpwi,
+                            error_handler=got_lpwi_err)
+                def got_self_handle_err(e):
+                    _logger.warning('Unable to get self-handle for %s:',
+                                    object_path, exc_info=1)
 
                 group = channel[CHANNEL_INTERFACE_GROUP]
-                group.GetAllMembers(reply_handler=got_all_members,
-                                    error_handler=got_all_members_err)
+                group.GetSelfHandle(reply_handler=got_self_handle,
+                                    error_handler=got_self_handle_err)
 
             # we throw away the channel as soon as ready() finishes
             Channel(self._conn.service_name, object_path,
