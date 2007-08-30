@@ -276,13 +276,23 @@ class Activity(ExportedGObject):
         """
         try:
             old_valid = self._valid
-            if self._color and self._actname and self._id and self._type:
+            if (self._color is not None and self._actname is not None
+                and self._id is not None and self._type is not None):
                 self._valid = True
             else:
                 self._valid = False
 
             if old_valid != self._valid:
                 self.emit("validity-changed", self._valid)
+                if self._valid:
+                    # Pretend everyone joined
+                    for buddy in self._buddies:
+                        self.BuddyJoined(buddy.object_path())
+                else:
+                    # Pretend everyone left
+                    for buddy in self._buddies:
+                        self.BuddyLeft(buddy.object_path())
+
         except AttributeError:
             self._valid = False
 
