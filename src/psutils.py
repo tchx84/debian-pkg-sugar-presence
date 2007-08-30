@@ -24,12 +24,34 @@ except ImportError:
     from sha import new as sha1
 
 import dbus
+from dbus.exceptions import DBusException
 import gobject
 
 
 _logger = logging.getLogger('s-p-s.psutils')
 
 _ASCII_ALNUM = ascii_letters + digits
+
+
+PRESENCE_INTERFACE = "org.laptop.Sugar.Presence"
+
+
+class NotJoinedError(DBusException):
+    def __init__(self, msg):
+        DBusException.__init__(self, msg)
+        self._dbus_error_name = PRESENCE_INTERFACE + '.NotJoined'
+
+
+class NotFoundError(DBusException):
+    def __init__(self, msg):
+        DBusException.__init__(self, msg)
+        self._dbus_error_name = PRESENCE_INTERFACE + '.NotFound'
+
+
+class WrongConnectionError(DBusException):
+    def __init__(self, msg):
+        DBusException.__init__(self, msg)
+        self._dbus_error_name = PRESENCE_INTERFACE + '.WrongConnection'
 
 
 def pubkey_to_keyid(key):
@@ -144,7 +166,7 @@ class IP4AddressMonitor(gobject.GObject):
             sys_bus = dbus.SystemBus()
             proxy = sys_bus.get_object(NM_SERVICE, NM_PATH)
             self._nm_obj = dbus.Interface(proxy, NM_IFACE)
-        except dbus.DBusException, err:
+        except DBusException, err:
             _logger.debug("Error finding NetworkManager: %s" % err)
             self._nm_present = False
             return

@@ -41,7 +41,7 @@ from buddyiconcache import buddy_icon_cache
 
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 
-_BUDDY_PATH = "/org/laptop/Sugar/Presence/Buddies/"
+BUDDY_PATH = "/org/laptop/Sugar/Presence/Buddies/"
 _BUDDY_INTERFACE = "org.laptop.Sugar.Presence.Buddy"
 
 _PROP_NICK = "nick"
@@ -174,12 +174,12 @@ class Buddy(ExportedGObject):
             key-ID or JID
         kwargs -- used to initialize the object's properties
 
-        constructs a DBUS "object path" from the _BUDDY_PATH
+        constructs a DBUS "object path" from the BUDDY_PATH
         and object_id
         """
 
         self._object_id = object_id
-        self._object_path = dbus.ObjectPath(_BUDDY_PATH + object_id)
+        self._object_path = dbus.ObjectPath(BUDDY_PATH + object_id)
 
         #: activity ID -> activity
         self._activities = {}

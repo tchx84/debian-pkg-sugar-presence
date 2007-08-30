@@ -23,7 +23,6 @@ from weakref import WeakValueDictionary
 import dbus
 import dbus.service
 import gobject
-from dbus.exceptions import DBusException
 from dbus.gobject_service import ExportedGObject
 from dbus.mainloop.glib import DBusGMainLoop
 from telepathy.client import ManagerRegistry, Connection
@@ -37,24 +36,18 @@ from sugar import util
 
 from server_plugin import ServerPlugin
 from linklocal_plugin import LinkLocalPlugin
-from buddy import Buddy, ShellOwner
+from buddy import Buddy, ShellOwner, BUDDY_PATH
 from activity import Activity
-from psutils import pubkey_to_keyid
+from psutils import pubkey_to_keyid, NotFoundError, PRESENCE_INTERFACE
 
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
 _PRESENCE_SERVICE = "org.laptop.Sugar.Presence"
-_PRESENCE_INTERFACE = "org.laptop.Sugar.Presence"
 _PRESENCE_PATH = "/org/laptop/Sugar/Presence"
 
 
 _logger = logging.getLogger('s-p-s.presenceservice')
-
-class NotFoundError(DBusException):
-    def __init__(self, msg):
-        DBusException.__init__(self, msg)
-        self._dbus_error_name = _PRESENCE_INTERFACE + '.NotFound'
 
 class PresenceService(ExportedGObject):
     __gtype_name__ = "PresenceService"
@@ -545,31 +538,31 @@ class PresenceService(ExportedGObject):
         self.PrivateInvitation(str(conn.service_name), conn.object_path,
                                chan_path)
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="o")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def ActivityAppeared(self, activity):
         pass
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="o")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def ActivityDisappeared(self, activity):
         pass
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="o")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def BuddyAppeared(self, buddy):
         pass
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="o")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def BuddyDisappeared(self, buddy):
         pass
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="o")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def ActivityInvitation(self, activity):
         pass
 
-    @dbus.service.signal(_PRESENCE_INTERFACE, signature="soo")
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="soo")
     def PrivateInvitation(self, bus_name, connection, channel):
         pass
 
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature='',
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature='',
                          out_signature="ao")
     def GetActivities(self):
         ret = []
@@ -578,7 +571,7 @@ class PresenceService(ExportedGObject):
                 ret.append(act.object_path())
         return ret
 
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="s",
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature="s",
                          out_signature="o")
     def GetActivityById(self, actid):
         act = self._activities_by_id.get(actid, None)
@@ -586,7 +579,7 @@ class PresenceService(ExportedGObject):
             raise NotFoundError("The activity was not found.")
         return act.object_path()
 
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature='',
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature='',
                          out_signature="ao")
     def GetBuddies(self):
         # in the presence of an out_signature, dbus-python will convert
@@ -603,7 +596,7 @@ class PresenceService(ExportedGObject):
                     ret.add(buddy)
         return ret
 
-    @dbus.service.method(_PRESENCE_INTERFACE,
+    @dbus.service.method(PRESENCE_INTERFACE,
                          in_signature="ay", out_signature="o",
                          byte_arrays=True)
     def GetBuddyByPublicKey(self, key):
@@ -618,7 +611,7 @@ class PresenceService(ExportedGObject):
                 return buddy.object_path()
         raise NotFoundError("The buddy was not found.")
 
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature='sou',
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature='sou',
                          out_signature='o')
     def GetBuddyByTelepathyHandle(self, tp_conn_name, tp_conn_path, handle):
         """Get the buddy corresponding to a Telepathy handle.
@@ -696,7 +689,7 @@ class PresenceService(ExportedGObject):
                     handle_to_buddy[handle] = buddy
         return ret
 
-    @dbus.service.method(_PRESENCE_INTERFACE,
+    @dbus.service.method(PRESENCE_INTERFACE,
                          in_signature='', out_signature="o")
     def GetOwner(self):
         if not self._owner:
@@ -704,26 +697,14 @@ class PresenceService(ExportedGObject):
         else:
             return self._owner.object_path()
 
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="sssa{sv}",
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature="sssa{sv}",
             out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
     def ShareActivity(self, actid, atype, name, properties, async_cb,
                       async_err_cb):
-        _logger.warning('ShareActivity deprecated, use AdvertiseActivity')
+        # FIXME: this makes all activities start off public.
+        # Once mutable properties have landed in sugar.presence, we should
+        # change the default to private=True.
         self._share_activity(actid, atype, name, properties, False,
-                             async_cb, async_err_cb)
-
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="sssa{sv}",
-            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
-    def AdvertiseActivity(self, actid, atype, name, properties, async_cb,
-                          async_err_cb):
-        self._share_activity(actid, atype, name, properties, False,
-                             async_cb, async_err_cb)
-
-    @dbus.service.method(_PRESENCE_INTERFACE, in_signature="sssa{sv}",
-            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
-    def InviteActivity(self, actid, atype, name, properties, async_cb,
-                      async_err_cb):
-        self._share_activity(actid, atype, name, properties, True,
                              async_cb, async_err_cb)
 
     def _get_preferred_plugin(self):
@@ -732,7 +713,7 @@ class PresenceService(ExportedGObject):
                 return tp
         return None
 
-    @dbus.service.method(_PRESENCE_INTERFACE,
+    @dbus.service.method(PRESENCE_INTERFACE,
                          in_signature='', out_signature="so")
     def GetPreferredConnection(self):
         tp = self._get_preferred_plugin()
@@ -745,7 +726,7 @@ class PresenceService(ExportedGObject):
         for tp in self._handles_buddies:
             tp.cleanup()
 
-    def _share_activity(self, actid, atype, name, properties, private, 
+    def _share_activity(self, actid, atype, name, properties, private,
                         async_cb, async_err_cb):
         """Create the shared Activity.
 

@@ -29,6 +29,8 @@ from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
                                   CHANNEL_TYPE_TEXT, CONN_INTERFACE,
                                   PROPERTIES_INTERFACE)
 
+from psutils import NotFoundError, NotJoinedError, WrongConnectionError
+
 
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
