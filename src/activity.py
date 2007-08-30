@@ -545,7 +545,7 @@ class Activity(ExportedGObject):
         The parameter has the same keys as for GetProperties(); missing
         keys are treated as unchanged.
         """
-        if not self.joined:
+        if not self._joined:
             raise NotJoinedError('Not in activity %s' % self._id)
 
         changed = False
