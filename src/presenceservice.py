@@ -492,7 +492,8 @@ class PresenceService(ExportedGObject):
 
         old_activities = set()
         for activity in buddy.get_joined_activities():
-            old_activities.add(activity.props.id)
+            if activity.room_details[0] == tp:
+                old_activities.add(activity.props.id)
 
         new_activities = set(activities.iterkeys())
 
