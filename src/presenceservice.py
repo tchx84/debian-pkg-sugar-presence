@@ -174,6 +174,8 @@ class PresenceService(ExportedGObject):
 
         if CONN_INTERFACE_BUDDY_INFO in conn:
             def buddy_activities_changed(contact, activities):
+                _logger.debug('ActivitiesChanged on %s: (%u, %r)', tp,
+                              contact, activities)
                 self._buddy_activities_changed(tp, contact, activities)
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
                     'ActivitiesChanged', buddy_activities_changed)
@@ -254,6 +256,18 @@ class PresenceService(ExportedGObject):
         if matches is not None:
             for match in matches:
                 match.remove()
+
+    def get_buddy_by_path(self, path):
+        """Get the Buddy object corresponding to an object-path, or None.
+
+        :Parameters:
+            path : dbus.ObjectPath
+                The object-path of a buddy
+        :Returns: a Buddy object or None
+        """
+        if not path.startswith(BUDDY_PATH):
+            return None
+        return self._buddies.get(path[len(BUDDY_PATH):])
 
     def get_buddy(self, objid):
         buddy = self._buddies.get(objid)
@@ -373,6 +387,8 @@ class PresenceService(ExportedGObject):
                     handle_error(e, 'fetching current activity')
             def got_activities(activities):
                 gobject.idle_add(self._run_contacts_online_queue)
+                _logger.debug('GetActivities() returned on %s contact %u: %r',
+                              tp, contact, activities)
                 self._buddy_activities_changed(tp, contact, activities)
             def get_activities():
                 try:
@@ -473,8 +489,6 @@ class PresenceService(ExportedGObject):
 
     def _buddy_activities_changed(self, tp, contact_handle, activities):
         activities = dict(activities)
-        _logger.debug("Handle %s activities changed: %s", contact_handle,
-                      activities)
         buddies = self._handles_buddies[tp]
         buddy = buddies.get(contact_handle)
 
@@ -747,7 +761,8 @@ class PresenceService(ExportedGObject):
         activity = Activity(self._session_bus, objid, self,
                             self._get_preferred_plugin(), 0,
                             id=actid, type=atype,
-                            name=name, color=color, local=True)
+                            name=name, color=color, local=True,
+                            private=private)
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         activity.connect("disappeared", self._activity_disappeared_cb)

@@ -41,9 +41,11 @@ _PROP_ID = "id"
 _PROP_NAME = "name"
 _PROP_COLOR = "color"
 _PROP_TYPE = "type"
+_PROP_TAGS = "tags"
 _PROP_VALID = "valid"
 _PROP_LOCAL = "local"
 _PROP_JOINED = "joined"
+_PROP_PRIVATE = "private"
 _PROP_CUSTOM_PROPS = "custom-props"
 
 _logger = logging.getLogger('s-p-s.activity')
@@ -76,8 +78,10 @@ class Activity(ExportedGObject):
                               gobject.PARAM_READWRITE |
                               gobject.PARAM_CONSTRUCT_ONLY),
         _PROP_NAME         : (str, None, None, None, gobject.PARAM_READWRITE),
+        _PROP_TAGS         : (object, None, None, gobject.PARAM_READWRITE),
         _PROP_COLOR        : (str, None, None, None, gobject.PARAM_READWRITE),
         _PROP_TYPE         : (str, None, None, None, gobject.PARAM_READWRITE),
+        _PROP_PRIVATE      : (bool, None, None, True, gobject.PARAM_READWRITE),
         _PROP_VALID        : (bool, None, None, False, gobject.PARAM_READABLE),
         _PROP_LOCAL        : (bool, None, None, False,
                               gobject.PARAM_READWRITE |
@@ -110,6 +114,8 @@ class Activity(ExportedGObject):
                 The globally unique activity ID (required)
             `name` : str
                 Human-readable title for the activity
+            `tags` : unicode
+                Tags for this activity
             `color` : str
                 Activity color in #RRGGBB,#RRGGBB (stroke,fill) format
             `type` : str
@@ -118,6 +124,8 @@ class Activity(ExportedGObject):
                 If True, this activity was initiated locally and is not
                 (yet) advertised on the network
                 (FIXME: is this description right?)
+            `private` : bool
+                If True, this activity is not advertised to everyone
             `custom-props` : dict
                 Activity-specific properties
         """
@@ -156,6 +164,8 @@ class Activity(ExportedGObject):
         self._id = None
         self._actname = None
         self._color = None
+        self._private = True
+        self._tags = u''
         self._local = False
         self._type = None
         self._custom_props = {}
@@ -216,10 +226,14 @@ class Activity(ExportedGObject):
             return self._id
         elif pspec.name == _PROP_NAME:
             return self._actname
+        elif pspec.name == _PROP_TAGS:
+            return self._tags
         elif pspec.name == _PROP_COLOR:
             return self._color
         elif pspec.name == _PROP_TYPE:
             return self._type
+        elif pspec.name == _PROP_PRIVATE:
+            return self._private
         elif pspec.name == _PROP_VALID:
             return self._valid
         elif pspec.name == _PROP_JOINED:
@@ -245,6 +259,10 @@ class Activity(ExportedGObject):
             self._actname = value
         elif pspec.name == _PROP_COLOR:
             self._color = value
+        elif pspec.name == _PROP_PRIVATE:
+            self._private = value
+        elif pspec.name == _PROP_TAGS:
+            self._tags = value
         elif pspec.name == _PROP_TYPE:
             if self._type:
                 raise RuntimeError("activity type is already set")
@@ -316,6 +334,16 @@ class Activity(ExportedGObject):
         _logger.debug('BuddyLeft: %s', buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
+                        signature="a{sv}")
+    def PropertiesChanged(self, properties):
+        """Emits D-Bus signal when properties of this activity change.
+
+        The properties dict is the same as for GetProperties, but omits
+        properties that have not actually changed.
+        """
+        _logger.debug('Emitting PropertiesChanged: %r', properties)
+
+    @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="o")
     def NewChannel(self, channel_path):
         """Generates DBUS signal when a new channel is created for this
@@ -331,13 +359,44 @@ class Activity(ExportedGObject):
 
     # dbus methods
     @dbus.service.method(_ACTIVITY_INTERFACE,
+                        in_signature="", out_signature="a{sv}")
+    def GetProperties(self):
+        """D-Bus method to get this activity's properties.
+
+        The keys of the dict are defined by Presence Service. Currently
+        the possible keys are:
+
+        `private` : bool
+            If False, the activity is advertised to everyone
+        `name` : unicode
+            The name of the activity - '' if not known yet
+        `tags` : unicode
+            The activity's tags (initially '')
+        `color` : string of the form #112233,#456789
+            The activity's icon color - '' if not known yet
+        `type` : string in the same format as a D-Bus well-known name
+            The activity type (cannot change) - '' if not known yet
+        `id` : string
+            The activity ID (cannot change) - '' if not known yet
+        """
+        ret = {_PROP_PRIVATE: self._private,
+               _PROP_NAME: self._name or u'',
+               _PROP_TAGS: self._tags,
+               _PROP_COLOR: self._color or '',
+               _PROP_TYPE: self._type or '',
+               _PROP_ID: self._id or '',
+               }
+        _logger.debug('%r', ret)
+        return ret
+
+    @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
     def GetId(self):
         """DBUS method to get this activity's (randomly generated) unique ID
 
         :Returns: Activity ID as a string
         """
-        return self._id
+        return self._id or ''
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
@@ -346,7 +405,7 @@ class Activity(ExportedGObject):
 
         :Returns: Activity colour as a string in the format #RRGGBB,#RRGGBB
         """
-        return self._color
+        return self._color or ''
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
@@ -356,7 +415,67 @@ class Activity(ExportedGObject):
         :Returns: Activity type as a string, in the same form as a D-Bus
             well-known name
         """
-        return self._type
+        return self._type or ''
+
+    @dbus.service.method(_ACTIVITY_INTERFACE,
+                         in_signature='os', out_signature='',
+                         async_callbacks=('async_cb', 'async_err_cb'))
+    def Invite(self, buddy_path, message, async_cb, async_err_cb):
+        """Invite a buddy to join this activity if they are not already in it.
+
+        :Parameters:
+            `buddy` : dbus.ObjectPath
+                The buddy to be invited
+            `message` : dbus.String
+                A message to send to the buddy
+        :Raises NotJoinedError: if we're not in the activity ourselves
+        :Raises NotFoundError: if there is no such buddy
+        :Raises WrongConnectionError: if the buddy is not visible on that
+            Telepathy connection
+        :Raises telepathy.errors.PermissionDenied: if we can't invite the buddy
+        """
+        if not self._joined:
+            _logger.debug('Not inviting %s into %s: I am not a member',
+                          buddy_path, self._id)
+            async_err_cb(NotJoinedError("Can't invite buddies into an "
+                                        "activity you haven't yourself "
+                                        "joined"))
+            return
+
+        assert self._tp is not None
+        assert self._text_channel is not None
+
+        buddy = self._ps.get_buddy_by_path(buddy_path)
+        if buddy is None:
+            _logger.debug('Not inviting nonexistent buddy %s', buddy_path)
+            async_err_cb(NotFoundError('Buddy not found: %s' % buddy_path))
+            return
+
+        if buddy in self._buddies:
+            # nothing to do
+            _logger.debug('Not inviting %s into %s: already a member',
+                          buddy_path, self._id)
+            async_cb()
+            return
+
+        # actually invite them
+        buddy_ident = buddy.get_identifier_by_plugin(self._tp)
+        if buddy_ident is None:
+            conn_path = self._tp.get_connection().object_path
+            _logger.debug('Activity %s is on connection %s but buddy %s is '
+                          'not', self._id, conn_path, buddy_path)
+            async_err_cb(WrongConnectionError('Buddy %s cannot be '
+                'invited to activity %s: the buddy is not on the '
+                'Telepathy connection %s'
+                % (buddy_path, self._id, conn_path)))
+        else:
+            _logger.debug('Inviting buddy %s to activity %s via handle #%d '
+                          '<%s>', buddy_path, self._id, buddy_ident[0],
+                          buddy_ident[1])
+            self._text_channel.AddMembers([buddy_ident[0]], message,
+                    dbus_interface=CHANNEL_INTERFACE_GROUP,
+                    reply_handler=async_cb,
+                    error_handler=async_err_cb)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature="", out_signature="",
@@ -419,13 +538,76 @@ class Activity(ExportedGObject):
         return self.get_channels()
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
+                         in_signature='a{sv}', out_signature='')
+    def SetProperties(self, new_props):
+        """D-Bus method to update the activity's properties.
+
+        The parameter has the same keys as for GetProperties(); missing
+        keys are treated as unchanged.
+        """
+        if not self.joined:
+            raise NotJoinedError('Not in activity %s' % self._id)
+
+        changed = False
+
+        val = new_props.pop(_PROP_TYPE, None)
+        if val is not None:
+            if self._type != val:
+                raise ValueError('"type" property may not change')
+
+        val = new_props.pop(_PROP_ID, None)
+        if val is not None:
+            if self._id != val:
+                raise ValueError('"id" property may not change')
+
+        val = new_props.pop(_PROP_PRIVATE, None)
+        if val is not None:
+            if not isinstance(val, (bool, dbus.Boolean)):
+                raise ValueError('"private" property must be boolean')
+            if self._private != val:
+                self._private = val
+                changed = True
+
+        val = new_props.pop(_PROP_NAME, None)
+        if val is not None:
+            if not isinstance(val, unicode):
+                raise ValueError('"name" property must be unicode string')
+            if self._actname != val:
+                self._actname = val
+                changed = True
+
+        val = new_props.pop(_PROP_TAGS, None)
+        if val is not None:
+            if not isinstance(val, unicode):
+                raise ValueError('"tags" property must be unicode string')
+            if self._tags != val:
+                self._tags = val
+                changed = True
+
+        val = new_props.pop(_PROP_COLOR, None)
+        if val is not None:
+            if not isinstance(val, unicode):
+                raise ValueError('"color" property must be string')
+            val = val.decode('ascii')
+            if self._color != val:
+                self._color = val
+                changed = True
+
+        if changed:
+            # FIXME: pass SetProperties errors back to caller too
+            self.send_properties()
+
+        if new_props:
+            raise ValueError('Unknown properties: %s' % new_props.keys())
+
+    @dbus.service.method(_ACTIVITY_INTERFACE,
                         in_signature="", out_signature="s")
     def GetName(self):
         """DBUS method to get this activity's name
 
         returns Activity name
         """
-        return self._actname
+        return self._actname or u''
 
     # methods
     def object_path(self):
@@ -615,11 +797,14 @@ class Activity(ExportedGObject):
 
     def _join_activity_channel_props_listed_cb(self, channel,
                                                prop_specs):
+        # FIXME: invite-only ought to be set on private activities; but
+        # since only the owner can change invite-only, that would break
+        # activity scope changes.
         props = {
             'anonymous': False,   # otherwise buddy resolution breaks
-            'invite-only': self._private,
+            'invite-only': False, # anyone who knows about the channel can join
             'persistent': False,  # vanish when there are no members
-            'private': self._private,
+            'private': True,      # don't appear in server room lists
         }
         props_to_set = []
         for ident, name, sig, flags in prop_specs:
@@ -638,8 +823,7 @@ class Activity(ExportedGObject):
         else:
             self._joined_cb(channel)
 
-    def _join_activity_create_channel_cb(self, chan_path):
-        channel = Channel(self._tp.get_connection().service_name, chan_path)
+    def _join_activity_enter_channel_cb(self, channel):
         if PROPERTIES_INTERFACE not in channel:
             self._join_activity_channel_props_listed_cb(channel, ())
         else:
@@ -648,6 +832,39 @@ class Activity(ExportedGObject):
                     self._join_activity_channel_props_listed_cb(
                         channel, prop_specs),
                 error_handler=self._join_failed_cb)
+
+    def _join_activity_local_pending_listed_cb(self, channel, local_pending):
+        _logger.debug('%s has local pending set: %s', self._id, local_pending)
+        self_ident = self._ps.owner.get_identifier_by_plugin(self._tp)
+        assert self_ident is not None
+
+        # FIXME: do this asynchronously too
+        room_self_handle = channel[CHANNEL_INTERFACE_GROUP].GetSelfHandle()
+
+        if self_ident[0] in local_pending:
+            _logger.debug('I am local pending - entering room')
+            channel[CHANNEL_INTERFACE_GROUP].AddMembers([self_ident[0]], '',
+                reply_handler=lambda:
+                    self._join_activity_enter_channel_cb(channel),
+                error_handler=self._join_failed_cb)
+        elif room_self_handle in local_pending:
+            _logger.debug('I am local pending with channel-specific handle - '
+                          'entering room')
+            channel[CHANNEL_INTERFACE_GROUP].AddMembers([room_self_handle], '',
+                reply_handler=lambda:
+                    self._join_activity_enter_channel_cb(channel),
+                error_handler=self._join_failed_cb)
+        else:
+            _logger.debug('I am already in the room')
+            self._join_activity_enter_channel_cb(channel)
+
+    def _join_activity_create_channel_cb(self, chan_path):
+        channel = Channel(self._tp.get_connection().service_name, chan_path)
+        channel[CHANNEL_INTERFACE_GROUP].GetLocalPendingMembers(
+            reply_handler=lambda local_pending:
+                self._join_activity_local_pending_listed_cb(
+                    channel, local_pending),
+            error_handler=self._join_failed_cb)
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
@@ -826,10 +1043,11 @@ class Activity(ExportedGObject):
 
         """
         props = {}
-        props['name'] = self._actname
-        props['color'] = self._color
-        props['type'] = self._type
+        props['name'] = self._actname or u''
+        props['color'] = self._color or ''
+        props['type'] = self._type or ''
         props['private'] = self._private
+        props['tags'] = self._tags
 
         conn = self._tp.get_connection()
 
@@ -850,8 +1068,9 @@ class Activity(ExportedGObject):
                 error_handler=properties_set)
 
     def set_properties(self, properties):
-        """Sets name, colour and/or type properties for this activity all
-        at once.
+        """Sets properties for this activity from a Telepathy
+        ActivityPropertiesChanged signal or the return from the Telepathy
+        GetProperties method.
 
         properties - Dictionary object containing properties keyed by
                      property names
@@ -861,37 +1080,67 @@ class Activity(ExportedGObject):
         be called, resulting in a "validity-changed" signal being generated.
         Called by the PresenceService on the local machine.
         """
-        changed  = False
+        changed_properties = {}
+
+        validity_maybe_changed  = False
         # split reserved properties from activity-custom properties
         (rprops, cprops) = self._split_properties(properties)
-        if _PROP_NAME in rprops.keys():
-            name = rprops[_PROP_NAME]
-            if name != self._actname:
-                self._actname = name
-                changed = True
 
-        if _PROP_COLOR in rprops.keys():
-            color = rprops[_PROP_COLOR]
-            if color != self._color:
-                self._color = color
-                changed = True
+        val = rprops.get(_PROP_NAME, self._actname)
+        if isinstance(val, unicode) and val != self._actname:
+            self._actname = val
+            changed_properties[_PROP_NAME] = val
+            validity_maybe_changed = True
 
-        if _PROP_TYPE in rprops.keys():
-            type_ = rprops[_PROP_TYPE]
-            if type_ != self._type:
-                # Type can never be changed after first set
-                if self._type:
-                    _logger.debug("Activity type changed by network; this "
-                                  "is illegal")
-                else:
-                    self._type = type_
-                    changed = True
+        val = bool(rprops.get(_PROP_PRIVATE, self._private))
+        if val != self._private:
+            changed_properties[_PROP_PRIVATE] = val
+            self._private = val
+
+        val = rprops.get(_PROP_TAGS, self._tags)
+        if isinstance(val, unicode) and val != self._tags:
+            changed_properties[_PROP_TAGS] = val
+            self._tags = val
+
+        val = rprops.get(_PROP_COLOR, self._color)
+        if isinstance(val, unicode):
+            try:
+                val = val.encode('ascii')
+            except UnicodeError:
+                _logger.debug('Invalid color %s', val)
+            else:
+                if val != self._color:
+                    self._color = val
+                    changed_properties[_PROP_COLOR] = val
+                    validity_maybe_changed = True
+
+        val = rprops.get(_PROP_TYPE, self._type)
+        if isinstance(val, unicode):
+            try:
+                val = val.encode('ascii')
+            except UnicodeError:
+                _logger.debug('Invalid activity type %s', val)
+            else:
+                if val != self._type:
+                    if self._type:
+                        _logger.debug('Peer attempted to change activity '
+                                      'type from %s to %s: ignoring',
+                                      self._type, val)
+                    else:
+                        self._type = val
+                        changed_properties[_PROP_TYPE] = val
+                        validity_maybe_changed = True
 
         # Set custom properties
+        # FIXME: is this actually required? If so, it needs to go into
+        # the PropertiesChanged dict somehow
         if len(cprops.keys()) > 0:
             self._custom_props = cprops
 
-        if changed:
+        if changed_properties:
+            self.PropertiesChanged(changed_properties)
+
+        if validity_maybe_changed:
             self._update_validity()
 
     def _split_properties(self, properties):

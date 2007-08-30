@@ -401,6 +401,16 @@ class Buddy(ExportedGObject):
         props[_PROP_CURACT] = self.props.current_activity or ''
         return props
 
+    def get_identifier_by_plugin(self, plugin):
+        """
+        :Parameters:
+            `plugin` : TelepathyPlugin
+                The Telepathy connection
+        :Returns: a tuple (Telepathy handle: integer,
+            unique identifier: str) or None
+        """
+        return self._handles.get(plugin)
+
     @dbus.service.method(_BUDDY_INTERFACE,
                          in_signature='', out_signature='a(sou)')
     def GetTelepathyHandles(self):
