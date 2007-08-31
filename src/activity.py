@@ -77,7 +77,7 @@ class Activity(ExportedGObject):
         _PROP_ID           : (str, None, None, None,
                               gobject.PARAM_READWRITE |
                               gobject.PARAM_CONSTRUCT_ONLY),
-        _PROP_NAME         : (str, None, None, None, gobject.PARAM_READWRITE),
+        _PROP_NAME         : (object, None, None, gobject.PARAM_READWRITE),
         _PROP_TAGS         : (object, None, None, gobject.PARAM_READWRITE),
         _PROP_COLOR        : (str, None, None, None, gobject.PARAM_READWRITE),
         _PROP_TYPE         : (str, None, None, None, gobject.PARAM_READWRITE),
@@ -112,7 +112,7 @@ class Activity(ExportedGObject):
         :Keywords:
             `id` : str
                 The globally unique activity ID (required)
-            `name` : str
+            `name` : unicode
                 Human-readable title for the activity
             `tags` : unicode
                 Tags for this activity
@@ -256,13 +256,13 @@ class Activity(ExportedGObject):
                 raise RuntimeError("activity ID is already set")
             self._id = value
         elif pspec.name == _PROP_NAME:
-            self._actname = value
+            self._actname = unicode(value)
         elif pspec.name == _PROP_COLOR:
             self._color = value
         elif pspec.name == _PROP_PRIVATE:
             self._private = value
         elif pspec.name == _PROP_TAGS:
-            self._tags = value
+            self._tags = unicode(value)
         elif pspec.name == _PROP_TYPE:
             if self._type:
                 raise RuntimeError("activity type is already set")
@@ -380,7 +380,7 @@ class Activity(ExportedGObject):
             The activity ID (cannot change) - '' if not known yet
         """
         ret = {_PROP_PRIVATE: self._private,
-               _PROP_NAME: self._name or u'',
+               _PROP_NAME: self._actname or u'',
                _PROP_TAGS: self._tags,
                _PROP_COLOR: self._color or '',
                _PROP_TYPE: self._type or '',
@@ -548,7 +548,7 @@ class Activity(ExportedGObject):
         if not self._joined:
             raise NotJoinedError('Not in activity %s' % self._id)
 
-        changed = False
+        changed = set()
 
         val = new_props.pop(_PROP_TYPE, None)
         if val is not None:
@@ -566,7 +566,7 @@ class Activity(ExportedGObject):
                 raise ValueError('"private" property must be boolean')
             if self._private != val:
                 self._private = val
-                changed = True
+                changed.add(_PROP_PRIVATE)
 
         val = new_props.pop(_PROP_NAME, None)
         if val is not None:
@@ -574,7 +574,7 @@ class Activity(ExportedGObject):
                 raise ValueError('"name" property must be unicode string')
             if self._actname != val:
                 self._actname = val
-                changed = True
+                changed.add(_PROP_NAME)
 
         val = new_props.pop(_PROP_TAGS, None)
         if val is not None:
@@ -582,7 +582,7 @@ class Activity(ExportedGObject):
                 raise ValueError('"tags" property must be unicode string')
             if self._tags != val:
                 self._tags = val
-                changed = True
+                changed.add(_PROP_TAGS)
 
         val = new_props.pop(_PROP_COLOR, None)
         if val is not None:
@@ -591,11 +591,11 @@ class Activity(ExportedGObject):
             val = val.decode('ascii')
             if self._color != val:
                 self._color = val
-                changed = True
+                changed.add(_PROP_COLOR)
 
         if changed:
             # FIXME: pass SetProperties errors back to caller too
-            self.send_properties()
+            self.send_properties(changed)
 
         if new_props:
             raise ValueError('Unknown properties: %s' % new_props.keys())
@@ -1038,7 +1038,7 @@ class Activity(ExportedGObject):
         self._leave_cb = None
         self._leave_err_cb = None
 
-    def send_properties(self):
+    def send_properties(self, changed=()):
         """Tells the Telepathy server what the properties of this activity are.
 
         """
@@ -1059,6 +1059,11 @@ class Activity(ExportedGObject):
             if e is None:
                 _logger.debug('Successfully set activity properties for %s',
                               self._id)
+                # signal it back to local processes too
+                # FIXME: if we stopped ignoring Telepathy
+                # ActivityPropertiesChanged signals from ourselves, we could
+                # just use that...
+                self.set_properties(props, changed)
             else:
                 _logger.debug('Failed to set activity properties for %s: %s',
                               self._id, e)
@@ -1067,13 +1072,14 @@ class Activity(ExportedGObject):
                 props, reply_handler=properties_set,
                 error_handler=properties_set)
 
-    def set_properties(self, properties):
+    def set_properties(self, properties, changed=()):
         """Sets properties for this activity from a Telepathy
         ActivityPropertiesChanged signal or the return from the Telepathy
         GetProperties method.
 
         properties - Dictionary object containing properties keyed by
                      property names
+        changed - iterable over properties that have definitely changed
 
         Note that if any of the name, colour and/or type property values is
         changed from what it originally was, the update_validity method will
@@ -1087,13 +1093,14 @@ class Activity(ExportedGObject):
         (rprops, cprops) = self._split_properties(properties)
 
         val = rprops.get(_PROP_NAME, self._actname)
-        if isinstance(val, unicode) and val != self._actname:
+        if isinstance(val, unicode) and (_PROP_NAME in changed or
+                                         val != self._actname):
             self._actname = val
             changed_properties[_PROP_NAME] = val
             validity_maybe_changed = True
 
         val = bool(rprops.get(_PROP_PRIVATE, self._private))
-        if val != self._private:
+        if _PROP_PRIVATE in changed or val != self._private:
             changed_properties[_PROP_PRIVATE] = val
             self._private = val
 
@@ -1109,7 +1116,7 @@ class Activity(ExportedGObject):
             except UnicodeError:
                 _logger.debug('Invalid color %s', val)
             else:
-                if val != self._color:
+                if _PROP_COLOR in changed or val != self._color:
                     self._color = val
                     changed_properties[_PROP_COLOR] = val
                     validity_maybe_changed = True
@@ -1121,7 +1128,7 @@ class Activity(ExportedGObject):
             except UnicodeError:
                 _logger.debug('Invalid activity type %s', val)
             else:
-                if val != self._type:
+                if _PROP_TYPE in changed or val != self._type:
                     if self._type:
                         _logger.debug('Peer attempted to change activity '
                                       'type from %s to %s: ignoring',

@@ -725,6 +725,8 @@ class PresenceService(ExportedGObject):
         # FIXME: this makes all activities start off public.
         # Once mutable properties have landed in sugar.presence, we should
         # change the default to private=True.
+        _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
+                      'properties=%r)', actid, atype, name, properties)
         self._share_activity(actid, atype, name, properties, False,
                              async_cb, async_err_cb)
 
@@ -794,7 +796,7 @@ class PresenceService(ExportedGObject):
                           activity.props.id)
         else:
             self.ActivityDisappeared(activity.object_path())
-            _logger.debug("Activity disappeared: %s (%s)", 
+            _logger.debug("Activity disappeared: %s (%s)",
                           activity.props.name, activity.props.id)
 
     def _activity_properties_changed(self, tp, act_handle, props):

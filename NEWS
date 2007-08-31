@@ -1,3 +1,8 @@
+* Fix non-ASCII activity names (smcv)
+* Notify local processes when we change an activity name, so the mesh
+  view can update (smcv)
+* Fix bug where activities initially had empty title in mesh view (smcv)
+
 Snapshot 25218b4642
 
 * Support invitations and non-public activities (smcv)
