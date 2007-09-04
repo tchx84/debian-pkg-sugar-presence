@@ -727,7 +727,7 @@ class PresenceService(ExportedGObject):
         # change the default to private=True.
         _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
                       'properties=%r)', actid, atype, name, properties)
-        self._share_activity(actid, atype, name, properties, False,
+        self._share_activity(actid, atype, name, properties, True,
                              async_cb, async_err_cb)
 
     def _get_preferred_plugin(self):
