@@ -1003,6 +1003,7 @@ class ShellOwner(GenericOwner):
         the activity_id shared will be None in those cases...
         """
         if not self._activities.has_key(activity_id):
+            print 'Local only activity'
             # This activity is local-only
             activity_id = None
         props = {_PROP_CURACT: activity_id}
