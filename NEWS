@@ -1,3 +1,6 @@
+* #3147: Set _PROP_CURACT to current activity when sharing an activity
+  or joining (morgs)
+
 Snapshot a79f7b6488
 
 * Fix non-ASCII activity names (smcv)

@@ -437,6 +437,7 @@ class Buddy(ExportedGObject):
         """Join or leave the activity when its validity changes"""
         if valid:
             self.JoinedActivity(activity.object_path())
+            self.set_properties({_PROP_CURACT: activity.props.id})
         else:
             self.LeftActivity(activity.object_path())
 
@@ -584,7 +585,7 @@ class Buddy(ExportedGObject):
     def update_current_activity(self, tp, current_activity):
         """Update the current activity from the given Telepathy connection.
         """
-        self.set_properties({'current-activity': current_activity})
+        self.set_properties({_PROP_CURACT: current_activity})
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
@@ -674,6 +675,7 @@ class GenericOwner(Buddy):
         del id_to_act[activity_id]
 
         self._set_self_activities(tp)
+        self.set_properties({_PROP_CURACT: None})
 
     def _set_self_activities(self, tp):
         """Forward set of joined activities to network
@@ -1008,4 +1010,3 @@ class ShellOwner(GenericOwner):
             activity_id = None
         props = {_PROP_CURACT: activity_id}
         self.set_properties(props)
-
