@@ -335,6 +335,11 @@ class Buddy(ExportedGObject):
         except KeyError:
             return
 
+        # act as though the buddy signalled ActivitiesChanged([])
+        for act in self.get_joined_activities():
+            if act.room_details[0] == tp_client:
+                act.buddy_apparently_left(self)
+
         self.TelepathyHandleRemoved(conn.service_name, conn.object_path,
                                     handle)
         # the Owner can't disappear - that would be silly

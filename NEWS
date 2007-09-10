@@ -1,3 +1,5 @@
+* When a buddy goes offline, consider them to have left all their
+  activities (smcv)
 * Improve tracking of who's in activities with us (smcv)
 * Refactor joining/sharing so we don't claim to have succeeded,
   or try to SetProperties(), until we're actually in the chatroom
