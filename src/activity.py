@@ -911,17 +911,20 @@ class Activity(ExportedGObject):
         self._private = private
 
         if self._room:
-            # we're probably sharing a local activity.
-            # FIXME: assert that this is the case?
-            # (try this:) assert self._local
+            # we already know what the room is => we must be joining someone
+            # else's activity?
             self._join_activity_got_handles_cb((self._room,))
-        else:
+        elif self._local:
+            # we need to create a room
             conn = self._tp.get_connection()
 
             conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
                 [self._tp.suggest_room_for_activity(self._id)],
                 reply_handler=self._join_activity_got_handles_cb,
                 error_handler=self._join_failed_cb)
+        else:
+            async_err_cb(RuntimeError("Don't know what room to join for "
+                                      "non-local activity %s" % self._id))
 
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
