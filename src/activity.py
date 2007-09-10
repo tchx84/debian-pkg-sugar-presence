@@ -784,46 +784,59 @@ class Activity(ExportedGObject):
                 self._text_channel_closed_cb)
         self._text_channel_matches.append(m)
 
-        # FIXME: do all this asynchronously
-        # FIXME: cope with non-Group channels?
+        # FIXME: cope with non-Group channels here if we want to support
+        # non-OLPC-compatible IMs
 
         group = text_channel[CHANNEL_INTERFACE_GROUP]
-        self._self_handle = group.GetSelfHandle()
 
-        self._text_channel_group_flags = 0
-        m = group.connect_to_signal('GroupFlagsChanged',
+        def got_all_members(members, local_pending, remote_pending):
+            members = set(members)
+            added = members - self._member_handles
+            removed = self._member_handles - members
+            if added or removed:
+                self._text_channel_members_changed_cb('', added, removed,
+                                                      (), (), 0, 0)
+
+            if self_ident[0] in local_pending:
+                _logger.debug('I am local pending - entering room')
+                group.AddMembers([self_ident[0]], '',
+                    reply_handler=lambda: None,
+                    error_handler=self._join_failed_cb)
+            elif self._self_handle in local_pending:
+                _logger.debug('I am local pending with channel-specific '
+                              'handle - entering room')
+                group.AddMembers([self._self_handle], '',
+                    reply_handler=lambda: None,
+                    error_handler=self._join_failed_cb)
+            elif self._self_handle in members:
+                _logger.debug('I am already in the room')
+                assert self._joined  # set by _text_channel_members_changed_cb
+
+        def got_group_flags(flags):
+            self._text_channel_group_flags = flags
+            # by the time we hook this, we need to know the group flags
+            m = group.connect_to_signal('MembersChanged',
+                                        self._text_channel_members_changed_cb)
+            self._text_channel_matches.append(m)
+
+            # bootstrap by getting the current state. This is where we find
+            # out whether anyone was lying to us in their PEP info
+            group.GetAllMembers(reply_handler=got_all_members,
+                                error_handler=self._join_failed_cb)
+
+        def got_self_handle(self_handle):
+            self._self_handle = self_handle
+            self._text_channel_group_flags = 0
+            m = group.connect_to_signal('GroupFlagsChanged',
                                     self._text_channel_group_flags_changed_cb)
-        self._text_channel_matches.append(m)
-        self._text_channel_group_flags = group.GetGroupFlags()
+            self._text_channel_matches.append(m)
 
-        # by the time we hook this, we need to know the group flags
-        m = group.connect_to_signal('MembersChanged',
-                                    self._text_channel_members_changed_cb)
-        self._text_channel_matches.append(m)
-        # bootstrap by getting the current state. This is where we find
-        # out whether anyone was lying to us in their PEP info
-        members, local_pending, remote_pending = group.GetAllMembers()
-        members = set(members)
-        added = members - self._member_handles
-        removed = self._member_handles - members
-        if added or removed:
-            self._text_channel_members_changed_cb('', added, removed,
-                                                  (), (), 0, 0)
+            group.GetGroupFlags(reply_handler=got_group_flags,
+                                error_handler=self._join_failed_cb)
 
-        if self_ident[0] in local_pending:
-            _logger.debug('I am local pending - entering room')
-            group.AddMembers([self_ident[0]], '',
-                reply_handler=lambda: None,
-                error_handler=self._join_failed_cb)
-        elif self._self_handle in local_pending:
-            _logger.debug('I am local pending with channel-specific handle - '
-                          'entering room')
-            group.AddMembers([self._self_handle], '',
-                reply_handler=lambda: None,
-                error_handler=self._join_failed_cb)
-        elif self._self_handle in members:
-            _logger.debug('I am already in the room')
-            assert self._joined     # set by _text_channel_members_changed_cb
+        group.GetSelfHandle(reply_handler=got_self_handle,
+                            error_handler=self._join_failed_cb)
+
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
