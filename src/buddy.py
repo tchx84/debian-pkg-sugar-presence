@@ -508,25 +508,25 @@ class Buddy(ExportedGObject):
                 nick = unicode(nick)
             if nick != self._nick:
                 self._nick = nick
-                changed_props[_PROP_NICK] = nick
+                changed_props[_PROP_NICK] = nick or u''
                 changed = True
         if _PROP_COLOR in properties:
             color = properties[_PROP_COLOR]
             if color != self._color:
                 self._color = color
-                changed_props[_PROP_COLOR] = color
+                changed_props[_PROP_COLOR] = color or ''
                 changed = True
         if _PROP_CURACT in properties:
             curact = properties[_PROP_CURACT]
             if curact != self._current_activity:
                 self._current_activity = curact
-                changed_props[_PROP_CURACT] = curact
+                changed_props[_PROP_CURACT] = curact or ''
                 changed = True
         if _PROP_IP4_ADDRESS in properties:
             ip4addr = properties[_PROP_IP4_ADDRESS]
             if ip4addr != self._ip4_address:
                 self._ip4_address = ip4addr
-                changed_props[_PROP_IP4_ADDRESS] = ip4addr
+                changed_props[_PROP_IP4_ADDRESS] = ip4addr or ''
                 changed = True
         if _PROP_KEY in properties:
             # don't allow key to be set more than once
@@ -534,7 +534,7 @@ class Buddy(ExportedGObject):
                 key = properties[_PROP_KEY]
                 if key is not None:
                     self._key = key
-                    changed_props[_PROP_KEY] = key
+                    changed_props[_PROP_KEY] = key or ''
                     changed = True
 
         if not changed or not changed_props:
@@ -680,7 +680,8 @@ class GenericOwner(Buddy):
         del id_to_act[activity_id]
 
         self._set_self_activities(tp)
-        self.set_properties({_PROP_CURACT: None})
+        if self._current_activity == activity_id:
+            self.set_properties({_PROP_CURACT: None})
 
     def _set_self_activities(self, tp):
         """Forward set of joined activities to network
@@ -728,6 +729,7 @@ class GenericOwner(Buddy):
                             'set current activity' % conn.object_path)
             return
 
+        self.PropertyChanged({_PROP_CURACT: self._current_activity or ''})
         conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
                 cur_activity_handle,
                 reply_handler=_noop,
