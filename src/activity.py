@@ -720,6 +720,8 @@ class Activity(ExportedGObject):
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
+            else:
+                self._ps.owner.set_properties({'current-activity': self.props.id})
             self._join_cb()
             _logger.debug("%s of activity %s succeeded" % (verb, self._id))
         except Exception, e:
