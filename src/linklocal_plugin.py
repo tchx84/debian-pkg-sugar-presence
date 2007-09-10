@@ -52,7 +52,7 @@ class LinkLocalPlugin(TelepathyPlugin):
 
     _TP_CONN_MANAGER = 'salut'
     _PROTOCOL = 'local-xmpp'
-    _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/salut/salut/"
+    _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/salut/"
 
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
