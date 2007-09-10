@@ -722,9 +722,6 @@ class PresenceService(ExportedGObject):
             out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
     def ShareActivity(self, actid, atype, name, properties, async_cb,
                       async_err_cb):
-        # FIXME: this makes all activities start off public.
-        # Once mutable properties have landed in sugar.presence, we should
-        # change the default to private=True.
         _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
                       'properties=%r)', actid, atype, name, properties)
         self._share_activity(actid, atype, name, properties, True,
