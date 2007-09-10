@@ -716,58 +716,7 @@ class Activity(ExportedGObject):
             for match in matches:
                 match.remove()
 
-    def _handle_share_join(self, text_channel):
-        """Called when a join to a network activity was successful.
-
-        Called by the _joined_cb method.
-        """
-        if not text_channel:
-            _logger.debug("Error sharing: text channel was None, shouldn't "
-                          "happen")
-            raise RuntimeError("Plugin returned invalid text channel")
-
-        self._text_channel = text_channel
-        self.NewChannel(text_channel.object_path)
-        self._clean_up_matches()
-
-        m = self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
-                self._text_channel_closed_cb)
-        self._text_channel_matches.append(m)
-        if CHANNEL_INTERFACE_GROUP in self._text_channel:
-            group = self._text_channel[CHANNEL_INTERFACE_GROUP]
-
-            # FIXME: make these method calls async?
-
-            m = group.connect_to_signal('GroupFlagsChanged',
-                    self._text_channel_group_flags_changed_cb)
-            self._text_channel_matches.append(m)
-            self._text_channel_group_flags = group.GetGroupFlags()
-
-            self._self_handle = group.GetSelfHandle()
-
-            # by the time we hook this, we need to know the group flags
-            m = group.connect_to_signal('MembersChanged',
-                                        self._text_channel_members_changed_cb)
-            self._text_channel_matches.append(m)
-            # bootstrap by getting the current state. This is where we find
-            # out whether anyone was lying to us in their PEP info
-            members = set(group.GetMembers())
-            added = members - self._member_handles
-            removed = self._member_handles - members
-            if added or removed:
-                self._text_channel_members_changed_cb('', added, removed,
-                                                      (), (), 0, 0)
-
-            # if we can see any member handles, we're probably able to see
-            # all members, so can stop caring about PEP announcements for this
-            # activity
-            self._joined = (self._self_handle in self._member_handles)
-        else:
-            self._joined = True
-
-        return True
-
-    def _joined_cb(self, text_channel):
+    def _joined_cb(self):
         """XXX - not documented yet
         """
         self._ps.owner.add_owner_activity(self._tp, self._id, self._room)
@@ -775,7 +724,6 @@ class Activity(ExportedGObject):
         verb = self._join_is_sharing and 'Share' or 'Join'
 
         try:
-            self._handle_share_join(text_channel)
             if self._join_is_sharing:
                 self.send_properties()
                 self._ps.owner.add_activity(self)
@@ -795,8 +743,7 @@ class Activity(ExportedGObject):
         self._join_cb = None
         self._join_err_cb = None
 
-    def _join_activity_channel_props_listed_cb(self, channel,
-                                               prop_specs):
+    def _join_activity_channel_props_listed_cb(self, prop_specs):
         # FIXME: invite-only ought to be set on private activities; but
         # since only the owner can change invite-only, that would break
         # activity scope changes.
@@ -817,55 +764,66 @@ class Activity(ExportedGObject):
         # supported here - raise an error?
 
         if props_to_set:
-            channel[PROPERTIES_INTERFACE].SetProperties(props_to_set,
-                reply_handler=lambda: self._joined_cb(channel),
+            self._text_channel[PROPERTIES_INTERFACE].SetProperties(
+                props_to_set, reply_handler=self._joined_cb,
                 error_handler=self._join_failed_cb)
         else:
-            self._joined_cb(channel)
+            self._joined_cb()
 
-    def _join_activity_enter_channel_cb(self, channel):
-        if PROPERTIES_INTERFACE not in channel:
-            self._join_activity_channel_props_listed_cb(channel, ())
-        else:
-            channel[PROPERTIES_INTERFACE].ListProperties(
-                reply_handler=lambda prop_specs:
-                    self._join_activity_channel_props_listed_cb(
-                        channel, prop_specs),
-                error_handler=self._join_failed_cb)
-
-    def _join_activity_local_pending_listed_cb(self, channel, local_pending):
-        _logger.debug('%s has local pending set: %s', self._id, local_pending)
+    def _join_activity_create_channel_cb(self, chan_path):
+        text_channel = Channel(self._tp.get_connection().service_name,
+                chan_path)
         self_ident = self._ps.owner.get_identifier_by_plugin(self._tp)
         assert self_ident is not None
 
-        # FIXME: do this asynchronously too
+        self._text_channel = text_channel
+        self.NewChannel(text_channel.object_path)
+        self._clean_up_matches()
+
+        m = self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
+                self._text_channel_closed_cb)
+        self._text_channel_matches.append(m)
+
+        # FIXME: do all this asynchronously
         # FIXME: cope with non-Group channels?
-        room_self_handle = channel[CHANNEL_INTERFACE_GROUP].GetSelfHandle()
+
+        group = text_channel[CHANNEL_INTERFACE_GROUP]
+        self._self_handle = group.GetSelfHandle()
+
+        self._text_channel_group_flags = 0
+        m = group.connect_to_signal('GroupFlagsChanged',
+                                    self._text_channel_group_flags_changed_cb)
+        self._text_channel_matches.append(m)
+        self._text_channel_group_flags = group.GetGroupFlags()
+
+        # by the time we hook this, we need to know the group flags
+        m = group.connect_to_signal('MembersChanged',
+                                    self._text_channel_members_changed_cb)
+        self._text_channel_matches.append(m)
+        # bootstrap by getting the current state. This is where we find
+        # out whether anyone was lying to us in their PEP info
+        members, local_pending, remote_pending = group.GetAllMembers()
+        members = set(members)
+        added = members - self._member_handles
+        removed = self._member_handles - members
+        if added or removed:
+            self._text_channel_members_changed_cb('', added, removed,
+                                                  (), (), 0, 0)
 
         if self_ident[0] in local_pending:
             _logger.debug('I am local pending - entering room')
-            channel[CHANNEL_INTERFACE_GROUP].AddMembers([self_ident[0]], '',
-                reply_handler=lambda:
-                    self._join_activity_enter_channel_cb(channel),
+            group.AddMembers([self_ident[0]], '',
+                reply_handler=lambda: None,
                 error_handler=self._join_failed_cb)
-        elif room_self_handle in local_pending:
+        elif self._self_handle in local_pending:
             _logger.debug('I am local pending with channel-specific handle - '
                           'entering room')
-            channel[CHANNEL_INTERFACE_GROUP].AddMembers([room_self_handle], '',
-                reply_handler=lambda:
-                    self._join_activity_enter_channel_cb(channel),
+            group.AddMembers([self._self_handle], '',
+                reply_handler=lambda: None,
                 error_handler=self._join_failed_cb)
-        else:
+        elif self._self_handle in members:
             _logger.debug('I am already in the room')
-            self._join_activity_enter_channel_cb(channel)
-
-    def _join_activity_create_channel_cb(self, chan_path):
-        channel = Channel(self._tp.get_connection().service_name, chan_path)
-        channel[CHANNEL_INTERFACE_GROUP].GetLocalPendingMembers(
-            reply_handler=lambda local_pending:
-                self._join_activity_local_pending_listed_cb(
-                    channel, local_pending),
-            error_handler=self._join_failed_cb)
+            assert self._joined     # set by _text_channel_members_changed_cb
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
@@ -1015,8 +973,17 @@ class Activity(ExportedGObject):
 
         # if we were among those removed, we'll have to start believing
         # the spoofable PEP-based activity tracking again.
-        if self._self_handle not in self._member_handles:
-            self._joined = False
+        if self._self_handle not in self._member_handles and self._joined:
+            self._text_channel_closed_cb()
+
+        if self._self_handle in self._member_handles and not self._joined:
+            self._joined = True
+            if PROPERTIES_INTERFACE not in self._text_channel:
+                self._join_activity_channel_props_listed_cb(())
+            else:
+                self._text_channel[PROPERTIES_INTERFACE].ListProperties(
+                    reply_handler=self._join_activity_channel_props_listed_cb,
+                    error_handler=self._join_failed_cb)
 
     def _text_channel_closed_cb(self):
         """Callback method called when the text channel is closed.
@@ -1039,6 +1006,7 @@ class Activity(ExportedGObject):
             except Exception, e:
                 _logger.debug("Leaving of activity %s failed: %s" % (self._id, e))
                 self._leave_err_cb(e)
+        self._clean_up_matches()
         self._leave_cb = None
         self._leave_err_cb = None
 
