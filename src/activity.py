@@ -701,9 +701,6 @@ class Activity(ExportedGObject):
         """
         if not self._joined:
             self._remove_buddies((buddy,))
-        else:
-            # XXX Buddy-left starts working partially at least, if we do this anyway:
-            self._remove_buddies((buddy,))
 
     def _text_channel_group_flags_changed_cb(self, added, removed):
         self._text_channel_group_flags |= added
