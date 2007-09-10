@@ -719,7 +719,7 @@ class Activity(ExportedGObject):
     def _handle_share_join(self, text_channel):
         """Called when a join to a network activity was successful.
 
-        Called by the _shared_cb and _joined_cb methods.
+        Called by the _joined_cb method.
         """
         if not text_channel:
             _logger.debug("Error sharing: text channel was None, shouldn't "
@@ -839,6 +839,7 @@ class Activity(ExportedGObject):
         assert self_ident is not None
 
         # FIXME: do this asynchronously too
+        # FIXME: cope with non-Group channels?
         room_self_handle = channel[CHANNEL_INTERFACE_GROUP].GetSelfHandle()
 
         if self_ident[0] in local_pending:
