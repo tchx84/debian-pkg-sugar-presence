@@ -349,13 +349,9 @@ class Activity(ExportedGObject):
         """Generates DBUS signal when a new channel is created for this
         activity.
 
-        channel_path -- DBUS path to new channel
-
-        XXX - what is this supposed to do?  Who is supposed to call it?
-        What is the channel path?  Right now this is never called.
-
+        channel_path -- Object path of the new Telepathy channel
         """
-        pass
+        _logger.debug('Emitting NewChannel(%r)', channel_path)
 
     # dbus methods
     @dbus.service.method(_ACTIVITY_INTERFACE,
