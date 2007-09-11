@@ -1,3 +1,5 @@
+* #3328: when we join an activity on Salut, don't stop it from being
+  the other participants' current activity (smcv)
 * #3327: don't let a slower connection manager delete current activity
   advertised by a faster one (smcv)
 * #2299: Be sure buddies keys are converted to string (cassidy)
