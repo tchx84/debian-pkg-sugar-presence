@@ -1,3 +1,5 @@
+* #3327: don't let a slower connection manager delete current activity
+  advertised by a faster one (smcv)
 * #3291: Further improve activity participant tracking (smcv)
 * Correctly pick up existing Salut connections (smcv)
 * Don't crash if a buddy property is None (smcv)

@@ -192,6 +192,7 @@ class Buddy(ExportedGObject):
         self._key = None
         self._icon = ''
         self._current_activity = None
+        self._current_activity_plugin = None
         self._nick = None
         self._color = None
         self._ip4_address = None
@@ -590,7 +591,12 @@ class Buddy(ExportedGObject):
     def update_current_activity(self, tp, current_activity):
         """Update the current activity from the given Telepathy connection.
         """
-        self.set_properties({_PROP_CURACT: current_activity})
+        # don't allow an absent current-activity to overwrite a present one
+        # unless our current current-activity was advertised by the same
+        # Telepathy connection
+        if current_activity or self._current_activity_plugin is tp:
+            self._current_activity_plugin = tp
+            self.set_properties({_PROP_CURACT: current_activity})
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
@@ -714,9 +720,6 @@ class GenericOwner(Buddy):
             if cur_activity_handle is None:
                 # don't advertise a current activity that's not shared on
                 # this connection
-                # FIXME: this gives us a different current activity on each
-                # connection - need to make sure clients are OK with this
-                # (at the moment, PS isn't!)
                 cur_activity = ""
                 cur_activity_handle = 0
 
