@@ -140,8 +140,15 @@ class Activity(ExportedGObject):
         self._object_path = dbus.ObjectPath(_ACTIVITY_PATH +
                                             str(self._object_id))
 
+        # The buddies really in the channel, which we can see directly because
+        # we've joined. If _joined is False, this will be incomplete.
+        # { member handle, possibly channel-specific => Buddy }
+        self._handle_to_buddy = {}
+        # The buddies the PS thinks are in the channel. If _joined is True
+        # this is kept in sync with reality. If _joined is False this is
+        # based on buddies' claimed activities.
         self._buddies = set()
-        self._member_handles = set()
+        # Equal to (self._self_handle in self._handle_to_buddy.keys())
         self._joined = False
 
         self._join_cb = None
@@ -771,6 +778,7 @@ class Activity(ExportedGObject):
         assert self_ident is not None
 
         self._text_channel = text_channel
+        self._handle_to_buddy = {}
         self.NewChannel(text_channel.object_path)
         self._clean_up_matches()
 
@@ -784,11 +792,8 @@ class Activity(ExportedGObject):
         group = text_channel[CHANNEL_INTERFACE_GROUP]
 
         def got_all_members(members, local_pending, remote_pending):
-            members = set(members)
-            added = members - self._member_handles
-            removed = self._member_handles - members
-            if added or removed:
-                self._text_channel_members_changed_cb('', added, removed,
+            if members:
+                self._text_channel_members_changed_cb('', members, (),
                                                       (), (), 0, 0)
 
             if self_ident[0] in local_pending:
@@ -936,6 +941,8 @@ class Activity(ExportedGObject):
     def _text_channel_members_changed_cb(self, message, added, removed,
                                          local_pending, remote_pending,
                                          actor, reason):
+        _logger.debug('Activity %s text channel %u currently has %r',
+                      self._id, self._room, self._handle_to_buddy)
         _logger.debug('Text channel %u members changed: + %r, - %r, LP %r, '
                       'RP %r, message %r, actor %r, reason %r', self._room,
                       added, removed, local_pending, remote_pending,
@@ -945,20 +952,25 @@ class Activity(ExportedGObject):
 
         if (self._text_channel_group_flags &
             CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES):
+            _logger.debug('This channel has channel-specific handles')
             map_chan = self._text_channel
         else:
             # we have global handles here
+            _logger.debug('This channel has global handles')
             map_chan = None
 
-        # disregard any who are already there
+        # Disregard any who are already there - however, if we're joining
+        # the channel, this will still consider everyone to have been added,
+        # because _handle_to_buddy was cleared. That's necessary, so we get
+        # the handle-to-buddy mapping for everyone.
         added = set(added)
-        added -= self._member_handles
-        self._member_handles |= added
-
-        # for added people, we need a Buddy object
+        added -= frozenset(self._handle_to_buddy.iterkeys())
+        _logger.debug('After filtering for no-ops, we want to add %r', added)
         added_buddies = self._ps.map_handles_to_buddies(self._tp,
                                                         map_chan,
                                                         added)
+        for handle, buddy in added_buddies.iteritems():
+            self._handle_to_buddy[handle] = buddy
         self._add_buddies(added_buddies.itervalues())
 
         # we treat all pending members as if they weren't there
@@ -966,25 +978,39 @@ class Activity(ExportedGObject):
         removed |= set(local_pending)
         removed |= set(remote_pending)
         # disregard any who aren't already there
-        removed &= self._member_handles
-        self._member_handles -= removed
+        removed &= frozenset(self._handle_to_buddy.iterkeys())
 
-        # for removed people, don't bother creating a Buddy just so we can
-        # say it left. If we don't already have a Buddy object for someone,
-        # then obviously they're not in self._buddies!
-        removed_buddies = self._ps.map_handles_to_buddies(self._tp,
-                                                          map_chan,
-                                                          removed,
-                                                          create=False)
-        self._remove_buddies(removed_buddies.itervalues())
+        _logger.debug('After filtering for no-ops, we want to remove %r',
+                      removed)
+        removed_buddies = set()
+        for handle in removed:
+            buddy = self._handle_to_buddy.pop(handle, None)
+            removed_buddies.add(buddy)
+        self._remove_buddies(removed_buddies)
 
         # if we were among those removed, we'll have to start believing
         # the spoofable PEP-based activity tracking again.
-        if self._self_handle not in self._member_handles and self._joined:
+        if self._self_handle not in self._handle_to_buddy and self._joined:
             self._text_channel_closed_cb()
 
-        if self._self_handle in self._member_handles and not self._joined:
+        if self._self_handle in self._handle_to_buddy and not self._joined:
+            # We've just joined
             self._joined = True
+
+            _logger.debug('Syncing activity %s buddy list %r with reality %r',
+                          self._id, self._buddies, self._handle_to_buddy)
+            real_buddies = set(self._handle_to_buddy.itervalues())
+            added_buddies = real_buddies - self._buddies
+            if added_buddies:
+                _logger.debug('... %r are here although they claimed not',
+                              added_buddies)
+            removed_buddies = self._buddies - real_buddies
+            _logger.debug('... %r claimed to be here but are not',
+                          removed_buddies)
+            self._add_buddies(added_buddies)
+            self._remove_buddies(removed_buddies)
+
+            # Finish the Join process
             if PROPERTIES_INTERFACE not in self._text_channel:
                 self._join_activity_channel_props_listed_cb(())
             else:
@@ -998,6 +1024,7 @@ class Activity(ExportedGObject):
         This callback is set up in the _handle_share_join method.
         """
         self._joined = False
+        self._handle_to_buddy = {}
         self._self_handle = None
         self._text_channel = None
         _logger.debug('Text channel closed')
