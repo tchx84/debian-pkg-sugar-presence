@@ -51,7 +51,7 @@ class ServerPlugin(TelepathyPlugin):
 
     _TP_CONN_MANAGER = 'gabble'
     _PROTOCOL = 'jabber'
-    _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/jabber/"
+    _OBJ_PATH_PREFIX = "/org/freedesktop/Telepathy/Connection/gabble/"
 
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
