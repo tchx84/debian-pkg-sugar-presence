@@ -186,7 +186,8 @@ class PresenceService(ExportedGObject):
                 if buddy is not None and buddy is not self._owner:
                     buddy.update_buddy_properties(tp, properties)
             m = conn[CONN_INTERFACE_BUDDY_INFO].connect_to_signal(
-                'PropertiesChanged', buddy_properties_changed)
+                'PropertiesChanged', buddy_properties_changed,
+                byte_arrays=True)
             self._conn_matches[conn].append(m)
 
             def buddy_curact_changed(contact, act_id, room):
