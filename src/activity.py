@@ -756,6 +756,7 @@ class Activity(ExportedGObject):
         props = {
             'anonymous': False,   # otherwise buddy resolution breaks
             'invite-only': False, # anyone who knows about the channel can join
+            'invite-restricted': False,     # so non-owners can invite others
             'persistent': False,  # vanish when there are no members
             'private': True,      # don't appear in server room lists
         }
