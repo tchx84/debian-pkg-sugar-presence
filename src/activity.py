@@ -29,7 +29,8 @@ from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
                                   CHANNEL_TYPE_TEXT, CONN_INTERFACE,
                                   PROPERTIES_INTERFACE)
 
-from psutils import NotFoundError, NotJoinedError, WrongConnectionError
+from psutils import (NotFoundError, NotJoinedError, WrongConnectionError,
+                     throw_into_callback)
 
 
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
@@ -440,7 +441,8 @@ class Activity(ExportedGObject):
         if not self._joined:
             _logger.debug('Not inviting %s into %s: I am not a member',
                           buddy_path, self._id)
-            async_err_cb(NotJoinedError("Can't invite buddies into an "
+            throw_into_callback(async_err_cb,
+                    NotJoinedError("Can't invite buddies into an "
                                         "activity you haven't yourself "
                                         "joined"))
             return
@@ -451,7 +453,8 @@ class Activity(ExportedGObject):
         buddy = self._ps.get_buddy_by_path(buddy_path)
         if buddy is None:
             _logger.debug('Not inviting nonexistent buddy %s', buddy_path)
-            async_err_cb(NotFoundError('Buddy not found: %s' % buddy_path))
+            throw_into_callback(async_err_cb,
+                    NotFoundError('Buddy not found: %s' % buddy_path))
             return
 
         if buddy in self._buddies:
@@ -467,10 +470,11 @@ class Activity(ExportedGObject):
             conn_path = self._tp.get_connection().object_path
             _logger.debug('Activity %s is on connection %s but buddy %s is '
                           'not', self._id, conn_path, buddy_path)
-            async_err_cb(WrongConnectionError('Buddy %s cannot be '
-                'invited to activity %s: the buddy is not on the '
-                'Telepathy connection %s'
-                % (buddy_path, self._id, conn_path)))
+            throw_into_callback(async_err_cb,
+                    WrongConnectionError('Buddy %s cannot be '
+                        'invited to activity %s: the buddy is not on the '
+                        'Telepathy connection %s'
+                        % (buddy_path, self._id, conn_path)))
         else:
             _logger.debug('Inviting buddy %s to activity %s via handle #%d '
                           '<%s>', buddy_path, self._id, buddy_ident[0],
@@ -478,7 +482,8 @@ class Activity(ExportedGObject):
             self._text_channel.AddMembers([buddy_ident[0]], message,
                     dbus_interface=CHANNEL_INTERFACE_GROUP,
                     reply_handler=async_cb,
-                    error_handler=async_err_cb)
+                    error_handler=lambda e:
+                        throw_into_callback(async_err_cb, e))
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature="", out_signature="",
@@ -739,7 +744,7 @@ class Activity(ExportedGObject):
     def _join_failed_cb(self, e):
         verb = self._join_is_sharing and 'Share' or 'Join'
         _logger.debug("%s of activity %s failed: %s" % (verb, self._id, e))
-        self._join_err_cb(e)
+        throw_into_callback(self._join_err_cb, e)
 
         self._join_cb = None
         self._join_err_cb = None
@@ -865,14 +870,15 @@ class Activity(ExportedGObject):
         _logger.debug("Starting share/join of activity %s", self._id)
 
         if self._joined:
-            async_err_cb(RuntimeError("Already joined activity %s"
-                                      % self._id))
+            throw_into_callback(async_err_cb,
+                    RuntimeError("Already joined activity %s" % self._id))
             return
 
         if self._join_cb is not None:
             # FIXME: or should we trigger all the attempts?
-            async_err_cb(RuntimeError('Already trying to join activity %s'
-                                      % self._id))
+            throw_into_callback(async_err_cb,
+                    RuntimeError('Already trying to join activity %s'
+                        % self._id))
             return
 
         self._join_cb = async_cb
@@ -893,8 +899,9 @@ class Activity(ExportedGObject):
                 reply_handler=self._join_activity_got_handles_cb,
                 error_handler=self._join_failed_cb)
         else:
-            async_err_cb(RuntimeError("Don't know what room to join for "
-                                      "non-local activity %s" % self._id))
+            throw_into_callback(async_err_cb,
+                    RuntimeError("Don't know what room to join for "
+                        "non-local activity %s" % self._id))
 
         _logger.debug("triggered share/join attempt on activity %s", self._id)
 
@@ -926,11 +933,12 @@ class Activity(ExportedGObject):
         _logger.debug("Leaving shared activity %s", self._id)
         if not self._joined:
             _logger.debug("Error: Had not joined activity %s" % self._id)
-            async_err_cb(RuntimeError("Had not joined activity %s"
-                                      % self._id))
+            throw_into_callback(async_err_cb,
+                    RuntimeError("Had not joined activity %s" % self._id))
             return
         if self._leave_cb is not None:
-            async_err_cb(RuntimeError('Already trying to leave activity %s'
+            throw_into_callback(async_err_cb,
+                    RuntimeError('Already trying to leave activity %s'
                                       % self._id))
             return
         self._leave_cb = async_cb

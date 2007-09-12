@@ -54,6 +54,18 @@ class WrongConnectionError(DBusException):
         self._dbus_error_name = PRESENCE_INTERFACE + '.WrongConnection'
 
 
+def throw_into_callback(async_err_cb, exc):
+    # Made necessary by https://bugs.freedesktop.org/show_bug.cgi?id=12403
+    # When that bug is fixed, replace:
+    #   throw_into_callback(async_err_cb, SomeError('foo'))
+    # with the more obvious:
+    #   async_err_cb(SomeError('foo'))
+    try:
+        raise exc
+    except:
+        async_err_cb(exc)
+
+
 def pubkey_to_keyid(key):
     """Return the key ID for the given public key. This is currently its SHA-1
     in hex.

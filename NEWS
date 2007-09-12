@@ -1,3 +1,6 @@
+* #3370: fix error reporting in logs by working around dbus-python bug#12403
+  (smcv)
+
 Snapshot bff163d57b
 
 * #3328: when we join an activity on Salut, don't stop it from being
