@@ -1,3 +1,5 @@
+* #3369: avoid Gabble invite-only activities disappearing from the
+  mesh view when we join them (smcv)
 * #3370: fix error reporting in logs by working around dbus-python bug#12403
   (smcv)
 

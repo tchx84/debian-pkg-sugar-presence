@@ -994,7 +994,13 @@ class Activity(ExportedGObject):
         for handle in removed:
             buddy = self._handle_to_buddy.pop(handle, None)
             removed_buddies.add(buddy)
-        self._remove_buddies(removed_buddies)
+        # If we're not in the room yet, the "removal" may be spurious -
+        # Gabble removes the inviter from members at the same time it adds
+        # us to local-pending. We'll catch up anyway when we join the room and
+        # do the apparent<->reality sync, so just don't remove anyone until
+        # we've joined.
+        if self._joined:
+            self._remove_buddies(removed_buddies)
 
         # if we were among those removed, we'll have to start believing
         # the spoofable PEP-based activity tracking again.
