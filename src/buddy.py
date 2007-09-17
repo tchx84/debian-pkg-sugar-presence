@@ -33,7 +33,8 @@ from telepathy.constants import CONNECTION_STATUS_CONNECTED
 from telepathy.interfaces import (CONN_INTERFACE_ALIASING,
                                   CONN_INTERFACE_AVATARS)
 
-from sugar import env, profile
+from sugar import env
+from sugar.profile import get_profile
 
 import psutils
 from buddyiconcache import buddy_icon_cache
@@ -949,12 +950,14 @@ class ShellOwner(GenericOwner):
 
         calls GenericOwner.__init__
         """
-        server = profile.get_server()
-        key_hash = profile.get_private_key_hash()
-        registered = profile.get_server_registered()
-        key = profile.get_pubkey()
-        nick = profile.get_nick_name()
-        color = profile.get_color().to_string()
+        profile = get_profile()
+
+        server = profile.jabber_server
+        registered = profile.jabber_registered
+        key_hash = profile.privkey_hash
+        key = profile.pubkey
+        nick = profile.name
+        color = profile.color.to_string()
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
         f = open(icon_file, "r")
@@ -984,7 +987,9 @@ class ShellOwner(GenericOwner):
     def set_registered(self, value):
         """Handle notification that we have been registered"""
         if value:
-            profile.set_server_registered()
+            profile = get_profile()
+            profile.jabber_registered
+            profile.save()
 
     def _icon_changed_cb(self, icon):
         """Handle icon change, set property to generate event"""
