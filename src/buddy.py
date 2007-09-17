@@ -956,7 +956,7 @@ class ShellOwner(GenericOwner):
         registered = profile.jabber_registered
         key_hash = profile.privkey_hash
         key = profile.pubkey
-        nick = profile.name
+        nick = profile.nick_name
         color = profile.color.to_string()
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
