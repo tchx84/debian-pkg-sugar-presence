@@ -148,8 +148,17 @@ class PresenceService(ExportedGObject):
     def _tp_status_cb(self, plugin, status, reason):
         if status == CONNECTION_STATUS_CONNECTED:
             self._tp_connected(plugin)
+            if plugin == self._server_plugin and self._ll_plugin:
+                # For now, Gabble takes precedence over Salut to alleviate
+                # corner cases where laptops on mesh can't talk to ones on APs
+                self._ll_plugin.cleanup()
         else:
             self._tp_disconnected(plugin)
+            if plugin == self._server_plugin and self._ll_plugin and status == CONNECTION_STATUS_DISCONNECTED:
+                # For now, Gabble takes precedence over Salut to alleviate
+                # corner cases where laptops on mesh can't talk to ones on APs
+                if self._ll_plugin.status == CONNECTION_STATUS_DISCONNECTED:
+                    self._ll_plugin.start()
 
     def _tp_connected(self, tp):
         self._connected_plugins.add(tp)

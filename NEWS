@@ -1,3 +1,5 @@
+* #3506: LL and server plugins are mutually exclusive for trial-3 (dcbw)
+
 Snapshot 46898a3e00
 
 * Adapt to sugar API change (marco)

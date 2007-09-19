@@ -278,11 +278,20 @@ class TelepathyPlugin(gobject.GObject):
                 self._conn[CONN_INTERFACE].Disconnect()
             except:
                 pass
-        self._conn = None
+
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
+        self.emit('status', self._conn_status, 0)
 
         if self._online_contacts:
-            self._contacts_offline(self._online_contacts)
+            # Copy contacts when passing them to self._contacts_offline to
+            # ensure it's pass by _value_, otherwise (since it's a set) it's
+            # passed by reference and odd things happen when it gets subtracted
+            # from itself
+            self._contacts_offline(self._online_contacts.copy())
+
+        # Erase connection as the last thing done, because some of the 
+        # above calls depend on self._conn being valid
+        self._conn = None
 
     def cleanup(self):
         self._stop()
