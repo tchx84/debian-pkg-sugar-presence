@@ -149,6 +149,9 @@ class Activity(ExportedGObject):
         # this is kept in sync with reality. If _joined is False this is
         # based on buddies' claimed activities.
         self._buddies = set()
+        # The buddies claiming to be in the channel. If _joined is False
+        # this is the same as _buddies.
+        self._claimed_buddies = set()
         # Equal to (self._self_handle in self._handle_to_buddy.keys())
         self._joined = False
 
@@ -653,6 +656,7 @@ class Activity(ExportedGObject):
         This method is called by the PresenceService on the local machine.
 
         """
+        self._claimed_buddies.add(buddy)
         if self._joined:
             _logger.debug("Ignoring alleged join to activity %s that I'm in: "
                           "I can already see who's there", self._id)
@@ -707,6 +711,7 @@ class Activity(ExportedGObject):
         If this activity is "valid", a BuddyLeft signal is also sent.
         This method is called by the PresenceService on the local machine.
         """
+        self._claimed_buddies.discard(buddy)
         if not self._joined:
             self._remove_buddies((buddy,))
 
@@ -1039,6 +1044,16 @@ class Activity(ExportedGObject):
         This callback is set up in the _handle_share_join method.
         """
         self._joined = False
+
+        # Remove people who claim not to be in the activity, and add people
+        # who were not in the activity but claimed to be. The first part
+        # fixes a bug where invite-only activities would still appear after
+        # we joined and left them, even if everyone else subsequently left too.
+        old_buddies = self._buddies - self._claimed_buddies
+        new_buddies = self._claimed_buddies - self._buddies
+        self._remove_buddies(old_buddies)
+        self._add_buddies(new_buddies)
+
         self._handle_to_buddy = {}
         self._self_handle = None
         self._text_channel = None
