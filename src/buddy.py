@@ -192,7 +192,7 @@ class Buddy(ExportedGObject):
         self._owner = False
         self._key = None
         self._icon = ''
-        self._current_activity = None
+        self._current_activity = ''
         self._current_activity_plugin = None
         self._nick = None
         self._color = None
