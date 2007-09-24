@@ -102,7 +102,7 @@ class LinkLocalPlugin(TelepathyPlugin):
             'first-name': ' ',
             'last-name': '%s' % self._owner.props.nick,
             'jid': '%s@%s' % (khash, server),
-            'published-name': '%s' % self._owner.props.nick,
+            'published-name': '%s' % khash[:8],
             }
 
     def _find_existing_connection(self):

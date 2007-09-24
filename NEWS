@@ -1,3 +1,5 @@
+* #3683: don't use (potentially long) user-supplied nickname in mDNS instance
+  names, this can break Salut activity advertisement (smcv)
 * #3422: don't emit spurious CurrentActivityChanged signal when changing from
   no current activity to no current activity (smcv)
 * #3465: don't keep invite-only activities in the mesh view after we leave
