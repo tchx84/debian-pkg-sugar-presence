@@ -26,8 +26,8 @@ from telepathy.client import Channel
 from telepathy.constants import (CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
                                  PROPERTY_FLAG_WRITE, HANDLE_TYPE_ROOM)
 from telepathy.interfaces import (CHANNEL_INTERFACE, CHANNEL_INTERFACE_GROUP,
-                                  CHANNEL_TYPE_TEXT, CONN_INTERFACE,
-                                  PROPERTIES_INTERFACE)
+                                  CHANNEL_TYPE_TEXT, CHANNEL_TYPE_TUBES, 
+                                  CONN_INTERFACE, PROPERTIES_INTERFACE)
 
 from psutils import (NotFoundError, NotJoinedError, WrongConnectionError,
                      throw_into_callback)
@@ -170,6 +170,7 @@ class Activity(ExportedGObject):
         self._text_channel_group_flags = 0
         #: list of SignalMatch associated with the text channel, or None
         self._text_channel_matches = None
+        self._dbus_tubes_channel = None
 
         self._valid = False
         self._id = None
@@ -782,9 +783,10 @@ class Activity(ExportedGObject):
         else:
             self._joined_cb()
 
-    def _join_activity_create_channel_cb(self, chan_path):
+    def _join_activity_create_dbus_tubes_cb(self, text_chan_path,
+                                            dbus_tubes_chan_path):
         text_channel = Channel(self._tp.get_connection().service_name,
-                chan_path)
+                text_chan_path)
         self_ident = self._ps.owner.get_identifier_by_plugin(self._tp)
         assert self_ident is not None
 
@@ -792,6 +794,10 @@ class Activity(ExportedGObject):
         self._handle_to_buddy = {}
         self.NewChannel(text_channel.object_path)
         self._clean_up_matches()
+        dbus_tubes_channel = Channel(self._tp.get_connection().service_name,
+                dbus_tubes_chan_path)
+        self._dbus_tubes_channel = dbus_tubes_channel
+        self.NewChannel(dbus_tubes_channel.object_path)
 
         m = self._text_channel[CHANNEL_INTERFACE].connect_to_signal('Closed',
                 self._text_channel_closed_cb)
@@ -847,6 +853,15 @@ class Activity(ExportedGObject):
         group.GetSelfHandle(reply_handler=got_self_handle,
                             error_handler=self._join_failed_cb)
 
+
+    def _join_activity_create_channel_cb(self, text_chan_path):
+        conn = self._tp.get_connection()
+        conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TUBES,
+            HANDLE_TYPE_ROOM, self._room, True,
+            reply_handler=lambda dbus_tubes_chan_path: \
+                self._join_activity_create_dbus_tubes_cb(
+                    text_chan_path, dbus_tubes_chan_path),
+            error_handler=self._join_failed_cb)
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
@@ -915,13 +930,17 @@ class Activity(ExportedGObject):
         """Local method to get the list of channels associated with this
         activity
 
-        returns XXX - expected a list of channels, instead returning a tuple?
+        returns tuple of (bus name, connection path, channels)
+        where channels is a list of channel paths such as text channel
+        and d-tubes channel.
         """
         conn = self._tp.get_connection()
-        # FIXME add tubes and others channels
+        # XXX add other channels as necessary
         channels = []
         if self._text_channel is not None:
             channels.append(self._text_channel.object_path)
+        if self._dbus_tubes_channel is not None:
+            channels.append(self._dbus_tubes_channel.object_path)
         return (str(conn.service_name), conn.object_path, channels)
 
     def leave(self, async_cb, async_err_cb):
