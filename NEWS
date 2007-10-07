@@ -1,3 +1,5 @@
+Snapshot 6d79687f8b
+
 * #3683: don't use (potentially long) user-supplied nickname in mDNS instance
   names, this can break Salut activity advertisement (smcv)
 * #3422: don't emit spurious CurrentActivityChanged signal when changing from
