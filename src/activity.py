@@ -319,6 +319,9 @@ class Activity(ExportedGObject):
                     # Pretend everyone joined
                     for buddy in self._buddies:
                         self.BuddyJoined(buddy.object_path())
+                        handle = buddy.get_identifier_by_plugin(self._tp)
+                        assert handle is not None
+                        self.BuddyHandleJoined(buddy.object_path(), handle[0])
                 else:
                     # Pretend everyone left
                     for buddy in self._buddies:
@@ -338,6 +341,17 @@ class Activity(ExportedGObject):
         _logger.debug('BuddyJoined: %s', buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
+                        signature="ou")
+    def BuddyHandleJoined(self, buddy_path, handle):
+        """Generates DBUS signal when a buddy joins this activity.
+
+        buddy_path -- DBUS path to buddy object
+        handle -- buddy handle in this activity
+        """
+        _logger.debug('BuddyHandleJoined: %s (handle %u)' % 
+                      (buddy_path, handle))
+
+    @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="o")
     def BuddyLeft(self, buddy_path):
         """Generates DBUS signal when a buddy leaves this activity.
@@ -345,6 +359,17 @@ class Activity(ExportedGObject):
         buddy_path -- DBUS path to buddy object
         """
         _logger.debug('BuddyLeft: %s', buddy_path)
+
+    @dbus.service.signal(_ACTIVITY_INTERFACE,
+                        signature="ou")
+    def BuddyHandleLeft(self, buddy_path, handle):
+        """Generates DBUS signal when a buddy leaves this activity.
+
+        buddy_path -- DBUS path to buddy object
+        handle -- buddy handle in this activity
+        """
+        _logger.debug('BuddyHandleLeft: %s (handle %u)' % 
+                      (buddy_path, handle))
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="a{sv}")
@@ -680,6 +705,9 @@ class Activity(ExportedGObject):
             buddy.add_activity(self)
             if self._valid:
                 self.BuddyJoined(buddy.object_path())
+                handle = buddy.get_identifier_by_plugin(self._tp)
+                assert handle is not None
+                self.BuddyHandleJoined(buddy.object_path(), handle[0])
             else:
                 _logger.debug('Suppressing BuddyJoined: activity not "valid"')
 
