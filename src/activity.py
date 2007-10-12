@@ -727,7 +727,12 @@ class Activity(ExportedGObject):
             buddy.remove_activity(self)
             if self._valid:
                 handle = self._buddy_to_handle.get(buddy)
-                self.BuddyHandleLeft(buddy.object_path(), handle)
+                if handle:
+                    self.BuddyHandleLeft(buddy.object_path(), handle)
+                else:
+                    # haven't tracked handles for buddies who claimed
+                    # to be in the activity but were not when we joined
+                    self.BuddyLeft(buddy.object_path())
             else:
                 _logger.debug(
                     'Suppressing BuddyHandleLeft: activity not "valid"')
