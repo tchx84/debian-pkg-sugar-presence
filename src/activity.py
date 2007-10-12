@@ -322,8 +322,8 @@ class Activity(ExportedGObject):
                         self.BuddyHandleJoined(buddy.object_path(), handle)
                 else:
                     # Pretend everyone left
-                    for (handle, buddy) in self._handle_to_buddy.iteritems():
-                        self.BuddyHandleLeft(buddy.object_path(), handle)
+                    for buddy in self._buddies:
+                        self.BuddyLeft(buddy.object_path())
 
         except AttributeError:
             self._valid = False
@@ -358,22 +358,8 @@ class Activity(ExportedGObject):
         """Generates DBUS signal when a buddy leaves this activity.
 
         buddy_path -- DBUS path to buddy object
-
-        XXX Deprecated - use BuddyHandleLeft
         """
         _logger.debug('BuddyLeft: %s', buddy_path)
-
-    @dbus.service.signal(_ACTIVITY_INTERFACE,
-                        signature="ou")
-    def BuddyHandleLeft(self, buddy_path, handle):
-        """Generates DBUS signal when a buddy leaves this activity.
-
-        buddy_path -- DBUS path to buddy object
-        handle -- buddy handle in this activity
-        """
-        _logger.debug('BuddyHandleLeft: %s (handle %u)' % 
-                      (buddy_path, handle))
-        self.BuddyLeft(buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="a{sv}")
@@ -726,29 +712,22 @@ class Activity(ExportedGObject):
         for buddy in buddies:
             buddy.remove_activity(self)
             if self._valid:
-                handle = self._buddy_to_handle.get(buddy)
-                if handle:
-                    self.BuddyHandleLeft(buddy.object_path(), handle)
-                else:
-                    # haven't tracked handles for buddies who claimed
-                    # to be in the activity but were not when we joined
-                    self.BuddyLeft(buddy.object_path())
+                self.BuddyLeft(buddy.object_path())
             else:
-                _logger.debug(
-                    'Suppressing BuddyHandleLeft: activity not "valid"')
+                _logger.debug('Suppressing BuddyLeft: activity not "valid"')
 
         if not self._buddies:
             self.emit('disappeared')
 
     def buddy_apparently_left(self, buddy):
-        """Removes a buddy from this activity and sends a BuddyHandleLeft
-        signal, unless we can already see who's in the activity by being
-        in it ourselves.
+        """Removes a buddy from this activity and sends a BuddyLeft signal,
+        unless we can already see who's in the activity by being in it
+        ourselves.
 
         buddy -- Buddy object representing the buddy being removed
 
         Removes a buddy from this activity if the buddy is in the buddy list.
-        If this activity is "valid", a BuddyHandleLeft signal is also sent.
+        If this activity is "valid", a BuddyLeft signal is also sent.
         This method is called by the PresenceService on the local machine.
         """
         self._claimed_buddies.discard(buddy)
@@ -1058,7 +1037,8 @@ class Activity(ExportedGObject):
                       removed)
         removed_buddies = set()
         for handle in removed:
-            buddy = self._handle_to_buddy.get(handle, None)
+            buddy = self._handle_to_buddy.pop(handle, None)
+            self._buddy_to_handle.pop(buddy)
             removed_buddies.add(buddy)
         # If we're not in the room yet, the "removal" may be spurious -
         # Gabble removes the inviter from members at the same time it adds
@@ -1067,12 +1047,6 @@ class Activity(ExportedGObject):
         # we've joined.
         if self._joined:
             self._remove_buddies(removed_buddies)
-
-        # Remove buddies from self._handle_to_buddy now that we have emitted
-        # BuddyHandleLeft
-        for handle in removed:
-            buddy = self._handle_to_buddy.pop(handle, None)
-            self._buddy_to_handle.pop(buddy)
 
         # if we were among those removed, we'll have to start believing
         # the spoofable PEP-based activity tracking again.
