@@ -1,3 +1,5 @@
+* Create Tubes Channel during join process (morgs)
+
 Snapshot 6d79687f8b
 
 * #3683: don't use (potentially long) user-supplied nickname in mDNS instance
