@@ -1,3 +1,5 @@
+Snapshot 439e31672b
+
 * Emit BuddyHandleJoined with Buddy and handle so sugar.presence can
   track handles without calling PS (morgs)
 * Create Tubes Channel during join process (morgs)
