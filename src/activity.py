@@ -221,6 +221,10 @@ class Activity(ExportedGObject):
                     reply_handler=self.set_properties,
                     error_handler=got_properties_err)
 
+    def __repr__(self):
+        return '<Activity #%s (ID %s) at %x>' % (self._object_id,
+                self._id, id(self))
+
     @property
     def room_details(self):
         """Return the Telepathy plugin on which this Activity can be joined
@@ -338,7 +342,7 @@ class Activity(ExportedGObject):
 
         XXX Deprecated - use BuddyHandleJoined
         """
-        _logger.debug('BuddyJoined: %s', buddy_path)
+        _logger.debug('%r: BuddyJoined: %s', self, buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="ou")
@@ -359,7 +363,7 @@ class Activity(ExportedGObject):
 
         buddy_path -- DBUS path to buddy object
         """
-        _logger.debug('BuddyLeft: %s', buddy_path)
+        _logger.debug('%r: BuddyLeft: %s', self, buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="a{sv}")
@@ -369,7 +373,7 @@ class Activity(ExportedGObject):
         The properties dict is the same as for GetProperties, but omits
         properties that have not actually changed.
         """
-        _logger.debug('Emitting PropertiesChanged: %r', properties)
+        _logger.debug('%r: Emitting PropertiesChanged: %r', self, properties)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
                         signature="o")
@@ -379,7 +383,7 @@ class Activity(ExportedGObject):
 
         channel_path -- Object path of the new Telepathy channel
         """
-        _logger.debug('Emitting NewChannel(%r)', channel_path)
+        _logger.debug('%r: Emitting NewChannel(%r)', self, channel_path)
 
     # dbus methods
     @dbus.service.method(_ACTIVITY_INTERFACE,
@@ -410,7 +414,7 @@ class Activity(ExportedGObject):
                _PROP_TYPE: self._type or '',
                _PROP_ID: self._id or '',
                }
-        _logger.debug('%r', ret)
+        _logger.debug('%r: GetProperties() returns %r', self, ret)
         return ret
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
@@ -459,8 +463,8 @@ class Activity(ExportedGObject):
         :Raises telepathy.errors.PermissionDenied: if we can't invite the buddy
         """
         if not self._joined:
-            _logger.debug('Not inviting %s into %s: I am not a member',
-                          buddy_path, self._id)
+            _logger.warning('%r: Not inviting %s to join: I am not a member',
+                            self, buddy_path)
             throw_into_callback(async_err_cb,
                     NotJoinedError("Can't invite buddies into an "
                                         "activity you haven't yourself "
@@ -472,15 +476,16 @@ class Activity(ExportedGObject):
 
         buddy = self._ps.get_buddy_by_path(buddy_path)
         if buddy is None:
-            _logger.debug('Not inviting nonexistent buddy %s', buddy_path)
+            _logger.warning('%r: Not inviting nonexistent buddy %s', self,
+                            buddy_path)
             throw_into_callback(async_err_cb,
                     NotFoundError('Buddy not found: %s' % buddy_path))
             return
 
         if buddy in self._buddies:
             # nothing to do
-            _logger.debug('Not inviting %s into %s: already a member',
-                          buddy_path, self._id)
+            _logger.debug('%r: Not inviting %s: already a member',
+                          self, buddy_path)
             async_cb()
             return
 
@@ -488,16 +493,16 @@ class Activity(ExportedGObject):
         buddy_ident = buddy.get_identifier_by_plugin(self._tp)
         if buddy_ident is None:
             conn_path = self._tp.get_connection().object_path
-            _logger.debug('Activity %s is on connection %s but buddy %s is '
-                          'not', self._id, conn_path, buddy_path)
+            _logger.warning('%r is on connection %s but buddy %s is '
+                          'not', self, conn_path, buddy_path)
             throw_into_callback(async_err_cb,
                     WrongConnectionError('Buddy %s cannot be '
                         'invited to activity %s: the buddy is not on the '
                         'Telepathy connection %s'
                         % (buddy_path, self._id, conn_path)))
         else:
-            _logger.debug('Inviting buddy %s to activity %s via handle #%d '
-                          '<%s>', buddy_path, self._id, buddy_ident[0],
+            _logger.debug('%r: Inviting buddy %s via handle #%d '
+                          '<%s>', self, buddy_path, buddy_ident[0],
                           buddy_ident[1])
             self._text_channel.AddMembers([buddy_ident[0]], message,
                     dbus_interface=CHANNEL_INTERFACE_GROUP,
@@ -675,16 +680,16 @@ class Activity(ExportedGObject):
         """
         self._claimed_buddies.add(buddy)
         if self._joined:
-            _logger.debug("Ignoring alleged join to activity %s that I'm in: "
-                          "I can already see who's there", self._id)
+            _logger.debug("Ignoring alleged join to activity %r that I'm in: "
+                          "I can already see who's there", self)
         else:
-            _logger.debug("%s says they joined activity %s that I'm not in",
-                          buddy.props.objid, self._id)
+            _logger.debug("%s says they joined activity %r that I'm not in",
+                          buddy.props.objid, self)
             self._add_buddies((buddy,))
 
     def _add_buddies(self, buddies):
         buddies = set(buddies)
-        _logger.debug("Adding buddies: %r", buddies)
+        _logger.debug("%r: Adding buddies: %r", self, buddies)
 
         # disregard any who are already there
         buddies -= self._buddies
@@ -694,15 +699,18 @@ class Activity(ExportedGObject):
         for buddy in buddies:
             buddy.add_activity(self)
             if self._valid:
+                op = buddy.object_path()
                 handle = self._buddy_to_handle.get(buddy)
-                self.BuddyHandleJoined(buddy.object_path(), handle)
+                _logger.debug('%r: emitting BuddyHandleJoined(%r, %u)',
+                              self, op, handle)
+                self.BuddyHandleJoined(op, handle)
             else:
-                _logger.debug(
-                    'Suppressing BuddyHandleJoined: activity not "valid"')
+                _logger.debug('Suppressing BuddyJoined: activity %r not '
+                              '"valid"', self)
 
     def _remove_buddies(self, buddies):
         buddies = set(buddies)
-        _logger.debug("Removing buddies: %r", buddies)
+        _logger.debug("%r: Removing buddies: %r", self, buddies)
 
         # disregard any who are not already there
         buddies &= self._buddies
@@ -712,11 +720,15 @@ class Activity(ExportedGObject):
         for buddy in buddies:
             buddy.remove_activity(self)
             if self._valid:
-                self.BuddyLeft(buddy.object_path())
+                op = buddy.object_path()
+                _logger.debug('%r: emitting BuddyLeft(%r)', self, op)
+                self.BuddyLeft(op)
             else:
-                _logger.debug('Suppressing BuddyLeft: activity not "valid"')
+                _logger.debug('Suppressing BuddyLeft: activity %r not "valid"',
+                              self)
 
         if not self._buddies:
+            _logger.debug('%r: no more people - disappearing', self)
             self.emit('disappeared')
 
     def buddy_apparently_left(self, buddy):
@@ -758,7 +770,7 @@ class Activity(ExportedGObject):
                 self._ps.owner.add_activity(self)
             self._ps.owner.set_properties({'current-activity': self.props.id})
             self._join_cb()
-            _logger.debug("%s of activity %s succeeded" % (verb, self._id))
+            _logger.debug("%s of activity %r succeeded", verb, self)
         except Exception, e:
             self._join_failed_cb(e)
 
@@ -767,7 +779,7 @@ class Activity(ExportedGObject):
 
     def _join_failed_cb(self, e):
         verb = self._join_is_sharing and 'Share' or 'Join'
-        _logger.debug("%s of activity %s failed: %s" % (verb, self._id, e))
+        _logger.debug("%s of activity %r failed: %s", verb, self, e)
         throw_into_callback(self._join_err_cb, e)
 
         self._join_cb = None
@@ -833,18 +845,18 @@ class Activity(ExportedGObject):
                                                       (), (), 0, 0)
 
             if self_ident[0] in local_pending:
-                _logger.debug('I am local pending - entering room')
+                _logger.debug('%r: I am local pending - entering room', self)
                 group.AddMembers([self_ident[0]], '',
                     reply_handler=lambda: None,
                     error_handler=self._join_failed_cb)
             elif self._self_handle in local_pending:
-                _logger.debug('I am local pending with channel-specific '
-                              'handle - entering room')
+                _logger.debug('%r: I am local pending with channel-specific '
+                              'handle - entering room', self)
                 group.AddMembers([self._self_handle], '',
                     reply_handler=lambda: None,
                     error_handler=self._join_failed_cb)
             elif self._self_handle in members:
-                _logger.debug('I am already in the room')
+                _logger.debug('%r: I am already in the room', self)
                 assert self._joined  # set by _text_channel_members_changed_cb
 
         def got_group_flags(flags):
@@ -907,15 +919,17 @@ class Activity(ExportedGObject):
         which in turn passes them back as parameters in a callback to the
         _joined_cb method; this callback is set up within this method.
         """
-        _logger.debug("Starting share/join of activity %s", self._id)
+        _logger.debug("Starting share/join of activity %r", self)
 
         if self._joined:
+            _logger.warning("Raising RuntimeError: Already joined %r", self)
             throw_into_callback(async_err_cb,
                     RuntimeError("Already joined activity %s" % self._id))
             return
 
         if self._join_cb is not None:
             # FIXME: or should we trigger all the attempts?
+            _logger.warning("Raising RuntimeError: Already joining %r", self)
             throw_into_callback(async_err_cb,
                     RuntimeError('Already trying to join activity %s'
                         % self._id))
@@ -939,11 +953,13 @@ class Activity(ExportedGObject):
                 reply_handler=self._join_activity_got_handles_cb,
                 error_handler=self._join_failed_cb)
         else:
+            _logger.warning("Raising RuntimeError: Don't know room for %r",
+                            self)
             throw_into_callback(async_err_cb,
                     RuntimeError("Don't know what room to join for "
                         "non-local activity %s" % self._id))
 
-        _logger.debug("triggered share/join attempt on activity %s", self._id)
+        _logger.debug("triggered share/join attempt on activity %r", self)
 
     def get_channels(self):
         """Local method to get the list of channels associated with this
@@ -974,15 +990,16 @@ class Activity(ExportedGObject):
         which in turn passes them back as parameters in a callback to the
         _left_cb method; this callback is set up within this method.
         """
-        _logger.debug("Leaving shared activity %s", self._id)
+        _logger.debug("Leaving shared activity %r", self)
         if not self._joined:
-            _logger.debug("Error: Had not joined activity %s" % self._id)
+            _logger.warning("Had not joined activity %r", self)
             throw_into_callback(async_err_cb,
                     RuntimeError("Had not joined activity %s" % self._id))
             return
         if self._leave_cb is not None:
+            _logger.warning("Already leaving activity %r", self)
             throw_into_callback(async_err_cb,
-                    RuntimeError('Already trying to leave activity %s'
+                    RuntimeError('Already trying to leave activity %r'
                                       % self._id))
             return
         self._leave_cb = async_cb
@@ -993,8 +1010,8 @@ class Activity(ExportedGObject):
     def _text_channel_members_changed_cb(self, message, added, removed,
                                          local_pending, remote_pending,
                                          actor, reason):
-        _logger.debug('Activity %s text channel %u currently has %r',
-                      self._id, self._room, self._handle_to_buddy)
+        _logger.debug('Activity %r text channel %u currently has %r',
+                      self, self._room, self._handle_to_buddy)
         _logger.debug('Text channel %u members changed: + %r, - %r, LP %r, '
                       'RP %r, message %r, actor %r, reason %r', self._room,
                       added, removed, local_pending, remote_pending,
@@ -1057,8 +1074,8 @@ class Activity(ExportedGObject):
             # We've just joined
             self._joined = True
 
-            _logger.debug('Syncing activity %s buddy list %r with reality %r',
-                          self._id, self._buddies, self._handle_to_buddy)
+            _logger.debug('Syncing activity %r buddy list %r with reality %r',
+                          self, self._buddies, self._handle_to_buddy)
             real_buddies = set(self._handle_to_buddy.itervalues())
             added_buddies = real_buddies - self._buddies
             if added_buddies:
@@ -1098,18 +1115,18 @@ class Activity(ExportedGObject):
         self._buddy_to_handle = {}
         self._self_handle = None
         self._text_channel = None
-        _logger.debug('Text channel closed')
+        _logger.debug('%r: Text channel closed')
         try:
             self._remove_buddies([self._ps.owner])
         except Exception, e:
             _logger.debug(
-                "Failed to remove you from %s: %s" % (self._id, e))
+                "Failed to remove you from %r: %s", self, e)
         if self._leave_cb and self._leave_err_cb:
             try:
                 self._leave_cb()
-                _logger.debug("Leaving of activity %s succeeded" % self._id)
+                _logger.debug("Leaving %r succeeded", self)
             except Exception, e:
-                _logger.debug("Leaving of activity %s failed: %s" % (self._id, e))
+                _logger.debug("Leaving %r failed: %s", self, e)
                 self._leave_err_cb(e)
         self._clean_up_matches()
         self._leave_cb = None
@@ -1134,16 +1151,15 @@ class Activity(ExportedGObject):
 
         def properties_set(e=None):
             if e is None:
-                _logger.debug('Successfully set activity properties for %s',
-                              self._id)
+                _logger.debug('%r props successfully set to %r', self, props)
                 # signal it back to local processes too
                 # FIXME: if we stopped ignoring Telepathy
                 # ActivityPropertiesChanged signals from ourselves, we could
                 # just use that...
                 self.set_properties(props, changed)
             else:
-                _logger.debug('Failed to set activity properties for %s: %s',
-                              self._id, e)
+                _logger.debug('Failed to set activity properties for %r: %s',
+                              self, e)
 
         conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].SetProperties(self._room,
                 props, reply_handler=properties_set,
@@ -1163,6 +1179,9 @@ class Activity(ExportedGObject):
         be called, resulting in a "validity-changed" signal being generated.
         Called by the PresenceService on the local machine.
         """
+        _logger.debug('%r: Telepathy CM changing properties to %r (forcing '
+                      'change signal for %r)',
+                      self, properties, changed)
         changed_properties = {}
 
         validity_maybe_changed  = False
