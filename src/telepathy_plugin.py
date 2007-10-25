@@ -276,8 +276,8 @@ class TelepathyPlugin(gobject.GObject):
         if self._conn:
             try:
                 self._conn[CONN_INTERFACE].Disconnect()
-            except:
-                pass
+            except dbus.DBusException, e:
+                _logger.debug('%s Disconnect(): %s', self._conn.object_path, e)
 
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
         self.emit('status', self._conn_status, 0)
