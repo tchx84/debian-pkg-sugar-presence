@@ -988,7 +988,7 @@ class ShellOwner(GenericOwner):
         """Handle notification that we have been registered"""
         if value:
             profile = get_profile()
-            profile.jabber_registered
+            profile.jabber_registered = True
             profile.save()
 
     def _icon_changed_cb(self, icon):

@@ -1,3 +1,5 @@
+* #4537: actually set registered = True (again) (smcv)
+
 Snapshot 25577b1486
 
 * #4027: associate activity debug messages with the relevant activity (smcv)
