@@ -20,6 +20,7 @@
 import logging
 from itertools import izip
 
+from dbus import DBusException
 import gobject
 
 from telepathy.client import (Channel, Connection)
@@ -276,7 +277,7 @@ class TelepathyPlugin(gobject.GObject):
         if self._conn:
             try:
                 self._conn[CONN_INTERFACE].Disconnect()
-            except dbus.DBusException, e:
+            except DBusException, e:
                 _logger.debug('%s Disconnect(): %s', self._conn.object_path, e)
 
         self._conn_status = CONNECTION_STATUS_DISCONNECTED
