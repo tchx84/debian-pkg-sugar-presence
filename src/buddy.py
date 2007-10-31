@@ -342,8 +342,11 @@ class Buddy(ExportedGObject):
             if act.room_details[0] == tp_client:
                 act.buddy_apparently_left(self)
 
-        self.TelepathyHandleRemoved(conn.service_name, conn.object_path,
-                                    handle)
+        # if the Connection Manager disconnected other than
+        # PS stopping it, then we don't have a connection.
+        if conn:
+            self.TelepathyHandleRemoved(conn.service_name,
+                                        conn.object_path, handle)
         # the Owner can't disappear - that would be silly
         if not self._handles and not self._owner:
             self.emit('disappeared')
