@@ -243,11 +243,11 @@ class TelepathyPlugin(gobject.GObject):
         If the connection disappears, stop the plugin.
         """
         if not dbus_name:
-            if self._conn_status == CONNECTION_STATUS_CONNECTED:
-                _logger.debug('telepathy connection %s lost: stopping %s',
-                              self._conn.service_name, self._TP_CONN_MANAGER)
-                self._conn = None
-                self._stop()
+            _logger.warning('telepathy connection %s lost: stopping %s',
+                            self._conn.service_name, self._TP_CONN_MANAGER)
+            self._handle_connection_status_change(
+                CONNECTION_STATUS_DISCONNECTED, 
+                CONNECTION_STATUS_REASON_NONE_SPECIFIED)
 
     def _handle_connection_status_change(self, status, reason):
         if status == self._conn_status:
@@ -291,6 +291,9 @@ class TelepathyPlugin(gobject.GObject):
         self._matches = []
         for match in matches:
             match.remove()
+        if self._watch_conn_name is not None:
+            self._watch_conn_name.cancel()
+        self._watch_conn_name = None
 
         if self._conn:
             try:
