@@ -1,5 +1,7 @@
 Snapshot f2411a6161
 
+* #2412: improve our ability to cope with disconnections and CM crashes (morgs)
+
 Snapshot 11d8103108
 
 * #4537: actually set registered = True (again) (smcv)
