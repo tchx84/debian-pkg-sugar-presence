@@ -344,7 +344,7 @@ class Buddy(ExportedGObject):
 
         # if the Connection Manager disconnected other than
         # PS stopping it, then we don't have a connection.
-        if conn:
+        if conn is not None:
             self.TelepathyHandleRemoved(conn.service_name,
                                         conn.object_path, handle)
         # the Owner can't disappear - that would be silly
