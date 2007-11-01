@@ -20,7 +20,7 @@
 import logging
 from itertools import izip
 
-from dbus import DBusException
+from dbus import DBusException, SessionBus
 import gobject
 
 from telepathy.client import (Channel, Connection)
@@ -135,6 +135,10 @@ class TelepathyPlugin(gobject.GObject):
         #: The ``publish`` channel: a `telepathy.client.Channel` or None
         self._publish_channel = None
 
+        #: Watch the connection on DBus session bus
+        self._session_bus = SessionBus()
+        self._watch_conn_name = None
+
     @property
     def status(self):
         """Return the Telepathy connection status."""
@@ -194,6 +198,8 @@ class TelepathyPlugin(gobject.GObject):
         m = conn[CONN_INTERFACE].connect_to_signal('NewChannel',
                                                    self._new_channel_cb)
         self._matches.append(m)
+        self._watch_conn_name = self._session_bus.watch_name_owner(
+            conn.service_name, self._watch_conn_name_cb)
 
         self._conn = conn
         status = self._conn[CONN_INTERFACE].GetStatus()
@@ -230,6 +236,18 @@ class TelepathyPlugin(gobject.GObject):
         conn = Connection(name, path)
         del acct
         return conn
+
+    def _watch_conn_name_cb(self, dbus_name):
+        """Check if we still have a connection on the DBus session bus.
+
+        If the connection disappears, stop the plugin.
+        """
+        if not dbus_name:
+            if self._conn_status == CONNECTION_STATUS_CONNECTED:
+                _logger.debug('telepathy connection %s lost: stopping %s',
+                              self._conn.service_name, self._TP_CONN_MANAGER)
+                self._conn = None
+                self._stop()
 
     def _handle_connection_status_change(self, status, reason):
         if status == self._conn_status:
