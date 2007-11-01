@@ -243,8 +243,9 @@ class TelepathyPlugin(gobject.GObject):
         If the connection disappears, stop the plugin.
         """
         if not dbus_name:
-            _logger.warning('telepathy connection %s lost: stopping %s',
-                            self._conn.service_name, self._TP_CONN_MANAGER)
+            _logger.warning(
+                'D-Bus name %s disappeared, this probably means %s crashed',
+                self._conn.service_name, self._TP_CONN_MANAGER)
             self._handle_connection_status_change(
                 CONNECTION_STATUS_DISCONNECTED, 
                 CONNECTION_STATUS_REASON_NONE_SPECIFIED)
