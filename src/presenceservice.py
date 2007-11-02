@@ -84,6 +84,9 @@ class PresenceService(ExportedGObject):
                 signal_name="Disconnected",
                 dbus_interface="org.freedesktop.DBus")
 
+        # Watch Activity D-Bus unique names
+        self._activity_name_watches = {}
+
         # Create the Owner object
         self._owner = self._create_owner()
         key = self._owner.props.key
@@ -479,6 +482,11 @@ class PresenceService(ExportedGObject):
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         activity.connect("disappeared", self._activity_disappeared_cb)
+        self._activity_name_watches[activity.props.id] =\
+            self._session_bus.watch_name_owner(
+                caller_dbus_name,
+                lambda dbus_name: self._watch_activity_name_cb(
+                    activity, dbus_name)) 
         self._activities_by_id[activity_id] = activity
         self._activities_by_handle[tp][room] = activity
         return activity
@@ -487,15 +495,10 @@ class PresenceService(ExportedGObject):
         _logger.debug("activity %s disappeared" % activity.props.id)
 
         self.ActivityDisappeared(activity.object_path())
-        try:
-            del self._activities_by_id[activity.props.id]
-        except KeyError:
-            pass
+        self._activities_by_id.pop(activity.props.id, None)
         tp, room = activity.room_details
-        try:
-            del self._activities_by_handle[tp][room]
-        except KeyError:
-            pass
+        self._activities_by_handle[tp].pop(room, None)
+        self._activity_name_watches.pop(activity.props.id, None)
 
     def _buddy_activities_changed(self, tp, contact_handle, activities):
         activities = dict(activities)
@@ -729,13 +732,14 @@ class PresenceService(ExportedGObject):
             return self._owner.object_path()
 
     @dbus.service.method(PRESENCE_INTERFACE, in_signature="sssa{sv}",
-            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
+            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'),
+            sender_keyword='sender')
     def ShareActivity(self, actid, atype, name, properties, async_cb,
-                      async_err_cb):
+                      async_err_cb, sender=None):
         _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
                       'properties=%r)', actid, atype, name, properties)
         self._share_activity(actid, atype, name, properties, True,
-                             async_cb, async_err_cb)
+                             async_cb, async_err_cb, sender)
 
     def _get_preferred_plugin(self):
         for tp in self._plugins:
@@ -757,7 +761,7 @@ class PresenceService(ExportedGObject):
             tp.cleanup()
 
     def _share_activity(self, actid, atype, name, properties, private,
-                        async_cb, async_err_cb):
+                        async_cb, async_err_cb, caller_dbus_name=None):
         """Create the shared Activity.
 
         actid -- XXX
@@ -768,6 +772,8 @@ class PresenceService(ExportedGObject):
             False for publicly advertised sharing
         async_cb -- function: Callback for success
         async_err_cb -- function: Callback for failure
+        caller_dbus_name -- string: activity's unique name on the D-Bus
+            session bus
         """
         objid = self._get_next_object_id()
         # XXX: is the preferred Telepathy plugin always the right way to
@@ -781,6 +787,11 @@ class PresenceService(ExportedGObject):
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         activity.connect("disappeared", self._activity_disappeared_cb)
+        self._activity_name_watches[activity.props.id] =\
+            self._session_bus.watch_name_owner(
+                caller_dbus_name,
+                lambda dbus_name: self._watch_activity_name_cb(
+                    activity, dbus_name))
         self._activities_by_id[actid] = activity
 
         def activity_shared():
@@ -813,6 +824,18 @@ class PresenceService(ExportedGObject):
             pass
         else:
             activity.set_properties(props)
+
+    def _watch_activity_name_cb(self, activity, dbus_name):
+        """Check if the activity's D-Bus unique name disappears.
+
+        If it does, the activity disappeared without Leave()ing.
+        """
+        if not dbus_name:
+            _logger.warning(
+                "Activity %s's D-Bus name disappeared, this probably "
+                'means it terminated without calling Leave().',
+                activity.props.name)
+            self._activity_disappeared_cb(activity)
 
 
 def main(test_num=0, randomize=False):
