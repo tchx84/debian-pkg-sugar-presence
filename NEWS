@@ -1,3 +1,5 @@
+Snapshot 944c5280b4
+
 * #4585: Watch activity unique names on D-Bus for disappearences, implying
   the activity crashed; this time, treat that as the local user leaving,
   not as the activity disappearing! (smcv)
