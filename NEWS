@@ -1,5 +1,8 @@
 Snapshot 0d8c69c14b
 
+* #4585: Watch activity unique names on D-Bus for disappearances implying
+  the activity crashed (morgs)
+
 Snapshot 1effa5a10d
 
 Snapshot f2411a6161
