@@ -5,7 +5,7 @@ Snapshot 944c5280b4
   not as the activity disappearing! (smcv)
 * #4659: Revert part of #4585 fix (this part didn't make sense anyway)
   to fix inability to join activities (smcv)
-* #4631: don't break the debug log if names are non-ASCII (smcv)
+* #4661: don't break the debug log if names are non-ASCII (smcv)
 
 Snapshot 0d8c69c14b
 
