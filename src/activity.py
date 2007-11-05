@@ -163,6 +163,10 @@ class Activity(ExportedGObject):
         self._leave_cb = None
         self._leave_err_cb = None
 
+        # if not None, auto-leave if this unique name falls off the bus
+        self._activity_unique_name = None
+        self._activity_unique_name_watch = None
+
         # the telepathy client
         self._tp = tp
         self._room = room
@@ -512,8 +516,9 @@ class Activity(ExportedGObject):
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature="", out_signature="",
-                         async_callbacks=('async_cb', 'async_err_cb'))
-    def Join(self, async_cb, async_err_cb):
+                         async_callbacks=('async_cb', 'async_err_cb'),
+                         sender_keyword='sender')
+    def Join(self, async_cb, async_err_cb, sender):
         """DBUS method for the local user to attempt to join the activity
 
         async_cb -- Callback method to be called if join attempt is successful
@@ -521,7 +526,14 @@ class Activity(ExportedGObject):
                         unsuccessful
 
         """
-        self.join(async_cb, async_err_cb, False)
+        self.join(async_cb, async_err_cb, False, sender)
+
+    def _activity_unique_name_cb(self, owner):
+        if not owner:
+            _logger.warning('%r: D-Bus name %s disappeared - activity '
+                            'probably crashed without calling Leave()',
+                            self, self._activity_unique_name)
+            self.leave(lambda: None, lambda e: None)
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature="", out_signature="",
@@ -905,7 +917,8 @@ class Activity(ExportedGObject):
             reply_handler=self._join_activity_create_channel_cb,
             error_handler=self._join_failed_cb)
 
-    def join(self, async_cb, async_err_cb, sharing, private=True):
+    def join(self, async_cb, async_err_cb, sharing, private=True,
+             sender=None):
         """Local method for the local user to attempt to join the activity.
 
         async_cb -- Callback method to be called with no parameters
@@ -939,6 +952,9 @@ class Activity(ExportedGObject):
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
         self._private = private
+        _logger.debug('%r: activity instance has unique name %s', self,
+                      sender)
+        self._activity_unique_name = sender
 
         if self._room:
             # we already know what the room is => we must be joining someone
@@ -990,6 +1006,11 @@ class Activity(ExportedGObject):
         which in turn passes them back as parameters in a callback to the
         _left_cb method; this callback is set up within this method.
         """
+        self._activity_unique_name = None
+        if self._activity_unique_name_watch is not None:
+            self._activity_unique_name_watch.cancel()
+        self._activity_unique_name_watch = None
+
         _logger.debug("Leaving shared activity %r", self)
         if not self._joined:
             _logger.warning("Had not joined activity %r", self)
@@ -1087,6 +1108,13 @@ class Activity(ExportedGObject):
             self._add_buddies(added_buddies)
             self._remove_buddies(removed_buddies)
 
+            # Leave if the activity crashes
+            if self._activity_unique_name is not None:
+                _logger.debug('Watching unique name %s',
+                              self._activity_unique_name)
+                self._activity_unique_name_watch = dbus.Bus().watch_name_owner(
+                    self._activity_unique_name, self._activity_unique_name_cb)
+
             # Finish the Join process
             if PROPERTIES_INTERFACE not in self._text_channel:
                 self._join_activity_channel_props_listed_cb(())
@@ -1115,7 +1143,7 @@ class Activity(ExportedGObject):
         self._buddy_to_handle = {}
         self._self_handle = None
         self._text_channel = None
-        _logger.debug('%r: Text channel closed')
+        _logger.debug('%r: Text channel closed', self)
         try:
             self._remove_buddies([self._ps.owner])
         except Exception, e:

@@ -729,13 +729,14 @@ class PresenceService(ExportedGObject):
             return self._owner.object_path()
 
     @dbus.service.method(PRESENCE_INTERFACE, in_signature="sssa{sv}",
-            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'))
+            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'),
+            sender_keyword='sender')
     def ShareActivity(self, actid, atype, name, properties, async_cb,
-                      async_err_cb):
+                      async_err_cb, sender):
         _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
                       'properties=%r)', actid, atype, name, properties)
         self._share_activity(actid, atype, name, properties, True,
-                             async_cb, async_err_cb)
+                             async_cb, async_err_cb, sender)
 
     def _get_preferred_plugin(self):
         for tp in self._plugins:
@@ -757,7 +758,7 @@ class PresenceService(ExportedGObject):
             tp.cleanup()
 
     def _share_activity(self, actid, atype, name, properties, private,
-                        async_cb, async_err_cb):
+                        async_cb, async_err_cb, sender):
         """Create the shared Activity.
 
         actid -- XXX
@@ -768,6 +769,7 @@ class PresenceService(ExportedGObject):
             False for publicly advertised sharing
         async_cb -- function: Callback for success
         async_err_cb -- function: Callback for failure
+        sender -- unique name of activity
         """
         objid = self._get_next_object_id()
         # XXX: is the preferred Telepathy plugin always the right way to
@@ -788,7 +790,8 @@ class PresenceService(ExportedGObject):
             self._activities_by_handle[tp][room] = activity
             async_cb(activity.object_path())
 
-        activity.join(activity_shared, async_err_cb, True, private)
+        activity.join(activity_shared, async_err_cb, True, private,
+                      sender=sender)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already

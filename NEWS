@@ -1,3 +1,9 @@
+* #4585: Watch activity unique names on D-Bus for disappearences, implying
+  the activity crashed; this time, treat that as the local user leaving,
+  not as the activity disappearing! (smcv)
+* #4659: Revert part of #4585 fix (this part didn't make sense anyway)
+  to fix inability to join activities (smcv)
+
 Snapshot 0d8c69c14b
 
 * #4585: Watch activity unique names on D-Bus for disappearances implying
