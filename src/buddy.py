@@ -220,7 +220,7 @@ class Buddy(ExportedGObject):
             self.IconChanged(self._icon)
 
     def __repr__(self):
-        return '<ps.buddy.Buddy %s>' % self._nick
+        return '<ps.buddy.Buddy %s>' % (self._nick or u'').encode('utf-8')
 
     def do_get_property(self, pspec):
         """Retrieve current value for the given property specifier
