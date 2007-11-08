@@ -1,3 +1,6 @@
+* #4692: Don't put activity sharer in 'private' property (correcting a wrong
+  part of the patch for #4585) (smcv)
+
 Snapshot 944c5280b4
 
 * #4585: Watch activity unique names on D-Bus for disappearences, implying

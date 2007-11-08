@@ -526,7 +526,7 @@ class Activity(ExportedGObject):
                         unsuccessful
 
         """
-        self.join(async_cb, async_err_cb, False, sender)
+        self.join(async_cb, async_err_cb, False, sender=sender)
 
     def _activity_unique_name_cb(self, owner):
         if not owner:
@@ -917,7 +917,7 @@ class Activity(ExportedGObject):
             reply_handler=self._join_activity_create_channel_cb,
             error_handler=self._join_failed_cb)
 
-    def join(self, async_cb, async_err_cb, sharing, private=True,
+    def join(self, async_cb, async_err_cb, sharing, private=None,
              sender=None):
         """Local method for the local user to attempt to join the activity.
 
@@ -926,7 +926,8 @@ class Activity(ExportedGObject):
         async_err_cb -- Callback method to be called with an Exception
             parameter if join attempt is unsuccessful
         sharing -- bool: True if sharing, False if joining
-        private -- bool: True if by invitation, False if Advertising
+        private -- bool: None if we shouldn't change it, True if by
+                         invitation, False if Advertising
 
         The two callbacks are passed to the server_plugin ("tp") object,
         which in turn passes them back as parameters in a callback to the
@@ -951,7 +952,8 @@ class Activity(ExportedGObject):
         self._join_cb = async_cb
         self._join_err_cb = async_err_cb
         self._join_is_sharing = sharing
-        self._private = private
+        if private is not None:
+            self._private = private
         _logger.debug('%r: activity instance has unique name %s', self,
                       sender)
         self._activity_unique_name = sender

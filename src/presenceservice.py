@@ -790,8 +790,8 @@ class PresenceService(ExportedGObject):
             self._activities_by_handle[tp][room] = activity
             async_cb(activity.object_path())
 
-        activity.join(activity_shared, async_err_cb, True, private,
-                      sender=sender)
+        activity.join(activity_shared, async_err_cb, sharing=True,
+                      private=private, sender=sender)
 
         # local activities are valid at creation by definition, but we can't
         # connect to the activity's validity-changed signal until its already
