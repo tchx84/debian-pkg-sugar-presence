@@ -770,15 +770,9 @@ class PresenceService(ExportedGObject):
         # by a separate argument are 'tags', 'color' and 'private', so let's
         # hard-code support for those and only those. See #4660
         private = properties.pop('private', True)
-        color = properties.pop('color', self._owner.props.color)
         tags = properties.pop('tags', u'')
 
         try:
-            if isinstance(color, unicode):
-                color = color.encode('ascii')
-            elif not isinstance(color, str):
-                raise ValueError('"color" property must be str or unicode')
-
             if not isinstance(tags, unicode):
                 raise ValueError('"tags" property must be Unicode string')
 
