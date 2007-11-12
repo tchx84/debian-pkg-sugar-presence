@@ -1,3 +1,5 @@
+Snapshot 43d1d48b27
+
 * #4692: Don't put activity sharer in 'private' property (correcting a wrong
   part of the patch for #4585) (smcv)
 * #4660: when calling ShareActivity(), allow private, tags, color to be set
