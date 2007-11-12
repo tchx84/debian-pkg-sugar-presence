@@ -728,16 +728,6 @@ class PresenceService(ExportedGObject):
         else:
             return self._owner.object_path()
 
-    @dbus.service.method(PRESENCE_INTERFACE, in_signature="sssa{sv}",
-            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'),
-            sender_keyword='sender')
-    def ShareActivity(self, actid, atype, name, properties, async_cb,
-                      async_err_cb, sender):
-        _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
-                      'properties=%r)', actid, atype, name, properties)
-        self._share_activity(actid, atype, name, properties, True,
-                             async_cb, async_err_cb, sender)
-
     def _get_preferred_plugin(self):
         for tp in self._plugins:
             if tp in self._connected_plugins:
@@ -757,29 +747,56 @@ class PresenceService(ExportedGObject):
         for tp in self._handles_buddies:
             tp.cleanup()
 
-    def _share_activity(self, actid, atype, name, properties, private,
-                        async_cb, async_err_cb, sender):
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature="sssa{sv}",
+            out_signature="o", async_callbacks=('async_cb', 'async_err_cb'),
+            sender_keyword='sender')
+    def ShareActivity(self, actid, atype, name, properties, async_cb,
+                      async_err_cb, sender):
         """Create the shared Activity.
 
         actid -- XXX
         atype -- XXX
         name -- XXX
         properties -- XXX
-        private -- bool: True for by-invitation-only sharing,
-            False for publicly advertised sharing
         async_cb -- function: Callback for success
         async_err_cb -- function: Callback for failure
         sender -- unique name of activity
         """
+        _logger.debug('ShareActivity(actid=%r, atype=%r, name=%r, '
+                      'properties=%r)', actid, atype, name, properties)
+
+        # FIXME: we should support the properties dict better.
+        # However, at the moment the only properties not already given
+        # by a separate argument are 'tags', 'color' and 'private', so let's
+        # hard-code support for those and only those. See #4660
+        private = properties.pop('private', True)
+        tags = properties.pop('tags', u'')
+
+        try:
+            if not isinstance(tags, unicode):
+                raise ValueError('"tags" property must be Unicode string')
+
+            if not isinstance(private, (dbus.Boolean, bool)):
+                raise ValueError('"private" property must be boolean')
+
+            if properties:
+                raise ValueError('Unsupported properties given: <%s>'
+                                 % ', '.join(properties.iterkeys()))
+        except ValueError, e:
+            async_err_cb(e)
+            return
+
         objid = self._get_next_object_id()
         # XXX: is the preferred Telepathy plugin always the right way to
         # share the activity?
-        color = self._owner.props.color
+        # We set private=True here - when the activity becomes shared
+        # via join(), we'll set private to the correct value.
         activity = Activity(self._session_bus, objid, self,
                             self._get_preferred_plugin(), 0,
                             id=actid, type=atype,
                             name=name, color=color, local=True,
-                            private=private)
+                            private=True, tags=tags)
+
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
         activity.connect("disappeared", self._activity_disappeared_cb)

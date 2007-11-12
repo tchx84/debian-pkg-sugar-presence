@@ -93,18 +93,18 @@ class TestOwner(GenericOwner):
         if not len(self._test_activities):
             # Share some activities
             actid = util.unique_id("Activity 1")
-            callbacks = (lambda *args: self._share_reply_cb(actid, *args),
-                         lambda *args: self._share_error_cb(actid, *args))
             atype = "org.laptop.WebActivity"
-            properties = {"foo": "bar"}
-            self._ps._share_activity(actid, atype, "Wembley Stadium", properties, callbacks)
+            properties = {"tags": "bar"}
+            self._ps.ShareActivity(actid, atype, "Wembley Stadium", properties,
+                    async_cb=lambda path: self._share_reply_cb(actid, path),
+                    async_err_cb=lambda e: self._share_error_cb(actid, e))
 
             actid2 = util.unique_id("Activity 2")
-            callbacks = (lambda *args: self._share_reply_cb(actid2, *args),
-                         lambda *args: self._share_error_cb(actid2, *args))
             atype = "org.laptop.WebActivity"
-            properties = {"baz": "bar"}
-            self._ps._share_activity(actid2, atype, "Maine Road", properties, callbacks)
+            properties = {"tags": "baz"}
+            self._ps.ShareActivity(actid2, atype, "Maine Road", properties,
+                async_cb=lambda path: self._share_reply_cb(actid2, path),
+                async_err_cb=lambda e: self._share_error_cb(actid2, e))
 
         # Change a random property ever 10 seconds
         if self._change_timeout == 0:
