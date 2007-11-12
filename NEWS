@@ -1,3 +1,5 @@
+* #4660: Fix regression when sharing an activity
+
 Snapshot 43d1d48b27
 
 * #4692: Don't put activity sharer in 'private' property (correcting a wrong

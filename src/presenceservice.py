@@ -794,8 +794,8 @@ class PresenceService(ExportedGObject):
         activity = Activity(self._session_bus, objid, self,
                             self._get_preferred_plugin(), 0,
                             id=actid, type=atype,
-                            name=name, color=color, local=True,
-                            private=True, tags=tags)
+                            name=name, color=self._owner.props.color,
+                            local=True, private=True, tags=tags)
 
         activity.connect("validity-changed",
                          self._activity_validity_changed_cb)
