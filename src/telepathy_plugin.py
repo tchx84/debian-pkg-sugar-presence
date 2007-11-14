@@ -470,6 +470,40 @@ class TelepathyPlugin(gobject.GObject):
                                CHANNEL_TYPE_STREAMED_MEDIA)):
             self.emit("private-invitation", object_path)
 
+        elif (handle_type == HANDLE_TYPE_LIST and
+              channel_type == CHANNEL_TYPE_CONTACT_LIST):
+            name = self._conn.InspectHandles(handle_type, [handle])[0]
+            channel = Channel(self._conn.service_name, object_path)
+
+            if name == 'publish':
+                self._publish_channel_cb(channel)
+            elif name == 'subscribe':
+                self._subscribe_channel_cb(channel)
+
+    def _publish_channel_cb(self, channel):
+        # the group of contacts who may receive your presence
+        self._publish_channel = channel
+        m = channel[CHANNEL_INTERFACE_GROUP].connect_to_signal(
+                'MembersChanged', self._publish_members_changed_cb)
+        self._matches.append(m)
+
+    def _subscribe_channel_cb(self, channel):
+        # the group of contacts for whom you wish to receive presence
+        self._subscribe_channel = channel
+        m = channel[CHANNEL_INTERFACE_GROUP].connect_to_signal(
+                'MembersChanged', self._subscribe_members_changed_cb)
+        self._matches.append(m)
+        subscribe_handles, subscribe_lp, subscribe_rp = \
+                channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
+        self._subscribe_members = set(subscribe_handles)
+        self._subscribe_local_pending = set(subscribe_lp)
+        self._subscribe_remote_pending = set(subscribe_rp)
+
+        if CONN_INTERFACE_PRESENCE in self._conn:
+            # request presence for everyone we're subscribed to
+            self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(
+                    subscribe_handles)
+
     def _connected_cb(self):
         """Callback on successful connection to a server
         """
@@ -485,31 +519,6 @@ class TelepathyPlugin(gobject.GObject):
         for iface in self._conn[CONN_INTERFACE].GetInterfaces():
             interfaces.add(iface)
 
-        # request both handles at the same time to reduce round-trips
-        pub_handle, sub_handle = self._conn[CONN_INTERFACE].RequestHandles(
-                HANDLE_TYPE_LIST, ['publish', 'subscribe'])
-
-        # the group of contacts who may receive your presence
-        publish = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
-                HANDLE_TYPE_LIST, pub_handle, True)
-        self._publish_channel = publish
-        m = publish[CHANNEL_INTERFACE_GROUP].connect_to_signal(
-                'MembersChanged', self._publish_members_changed_cb)
-        self._matches.append(m)
-
-        # the group of contacts for whom you wish to receive presence
-        subscribe = self._conn.request_channel(CHANNEL_TYPE_CONTACT_LIST,
-                HANDLE_TYPE_LIST, sub_handle, True)
-        self._subscribe_channel = subscribe
-        m = subscribe[CHANNEL_INTERFACE_GROUP].connect_to_signal(
-                'MembersChanged', self._subscribe_members_changed_cb)
-        self._matches.append(m)
-        subscribe_handles, subscribe_lp, subscribe_rp = \
-                subscribe[CHANNEL_INTERFACE_GROUP].GetAllMembers()
-        self._subscribe_members = set(subscribe_handles)
-        self._subscribe_local_pending = set(subscribe_lp)
-        self._subscribe_remote_pending = set(subscribe_rp)
-
         # FIXME: do this async?
         self.self_handle = self._conn[CONN_INTERFACE].GetSelfHandle()
         self.self_identifier = self._conn[CONN_INTERFACE].InspectHandles(
@@ -520,10 +529,6 @@ class TelepathyPlugin(gobject.GObject):
             m = self._conn[CONN_INTERFACE_PRESENCE].connect_to_signal(
                     'PresenceUpdate', self._presence_update_cb)
             self._matches.append(m)
-
-            # Request presence for everyone we're subscribed to
-            self._conn[CONN_INTERFACE_PRESENCE].RequestPresence(
-                    subscribe_handles)
         else:
             _logger.warning('%s does not support Connection.Interface.'
                             'Presence', self._conn.object_path)

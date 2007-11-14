@@ -235,22 +235,6 @@ class ServerPlugin(TelepathyPlugin):
 
         TelepathyPlugin._connected_cb(self)
 
-        publish_handles, local_pending, remote_pending = \
-                self._publish_channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
-
-        if local_pending:
-            # accept pending subscriptions
-            # FIXME: do this async
-            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
-                    local_pending, '')
-
-        # request subscriptions from people subscribed to us if we're not
-        # subscribed to them
-        not_subscribed = set(publish_handles)
-        not_subscribed -= self._subscribe_members
-        self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
-                not_subscribed, '')
-
     def _publish_members_changed_cb(self, message, added, removed,
                                     local_pending, remote_pending,
                                     actor, reason):
@@ -289,3 +273,23 @@ class ServerPlugin(TelepathyPlugin):
             return
 
         TelepathyPlugin._handle_connection_status_change(self, status, reason)
+
+    def _publish_channel_cb(self, channel):
+        TelepathyPlugin._publish_channel_cb(self, channel)
+
+        publish_handles, local_pending, remote_pending = \
+            self._publish_channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
+
+        if local_pending:
+            # accept pending subscriptions
+            # FIXME: do this async
+            self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                local_pending, '')
+
+        # request subscriptions from people subscribed to us if we're
+        # not subscribed to them
+        not_subscribed = set(publish_handles)
+        not_subscribed -= self._subscribe_members
+        self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                not_subscribed, '')
+
