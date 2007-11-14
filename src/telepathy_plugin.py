@@ -36,6 +36,8 @@ from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
         CONN_MGR_INTERFACE)
 
+import psutils
+
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
@@ -141,6 +143,11 @@ class TelepathyPlugin(gobject.GObject):
         #: Watch the connection on DBus session bus
         self._session_bus = SessionBus()
         self._watch_conn_name = None
+
+         # Monitor IPv4 address as an indicator of the network connection
+        self._ip4am = psutils.IP4AddressMonitor.get_instance()
+        self._ip4am_sigid = self._ip4am.connect('address-changed',
+                self._ip4_address_changed_cb)
 
     @property
     def status(self):
@@ -331,6 +338,8 @@ class TelepathyPlugin(gobject.GObject):
         if self._backoff_id > 0:
             gobject.source_remove(self._backoff_id)
             self._backoff_id = 0
+
+        self._ip4am.disconnect(self._ip4am_sigid)
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -540,3 +549,8 @@ class TelepathyPlugin(gobject.GObject):
             self._init_connection()
         else:
             _logger.debug('%r: Postponing connection', self)
+
+    def _ip4_address_changed_cb(self, ip4am, address):
+        _logger.debug("::: IP4 address now %s", address)
+
+        self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT

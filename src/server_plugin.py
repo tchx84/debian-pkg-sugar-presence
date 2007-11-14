@@ -56,16 +56,9 @@ class ServerPlugin(TelepathyPlugin):
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
 
-        # Monitor IPv4 address as an indicator of the network connection
-        self._ip4am = psutils.IP4AddressMonitor.get_instance()
-        self._ip4am_sigid = self._ip4am.connect('address-changed', self._ip4_address_changed_cb)
-
-    def cleanup(self):
-        TelepathyPlugin.cleanup(self)
-        self._ip4am.disconnect(self._ip4am_sigid)
-
     def _ip4_address_changed_cb(self, ip4am, address):
-        _logger.debug("::: IP4 address now %s", address)
+        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address)
+
         if address:
             _logger.debug("::: valid IP4 address, conn_status %s" %
                           self._conn_status)
