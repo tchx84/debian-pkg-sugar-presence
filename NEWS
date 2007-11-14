@@ -1,3 +1,6 @@
+* #4936: Enable SSL so we can use DEFLATE compression (robot101)
+* #4896: Wait for NewChannel with roster channels to avoid timeout leaving
+  you with no buddies (daf)
 * #2522: Use an exponential backoff when trying to reconnect CM (cassidy)
 * #4907: Try to reconnect Gabble if initial attempt failed (cassidy)
 
