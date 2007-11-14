@@ -22,6 +22,7 @@ from itertools import izip
 from string import hexdigits
 
 # Other libraries
+import dbus
 import gobject
 from telepathy.client import (ConnectionManager, Connection)
 from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
@@ -80,6 +81,9 @@ class ServerPlugin(TelepathyPlugin):
             'fallback-conference-server': "conference.%s" % server,
             'password': self._owner.get_key_hash(),
             'register': not self._owner.get_registered(),
+            'port': dbus.UInt32(5223),
+            'old-ssl': True,
+            'ignore-ssl-errors': True,
             }
 
     def suggest_room_for_activity(self, activity_id):
