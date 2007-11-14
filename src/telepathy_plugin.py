@@ -36,7 +36,6 @@ from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
         CONN_MGR_INTERFACE)
 
-
 CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
 
@@ -76,7 +75,8 @@ class TelepathyPlugin(gobject.GObject):
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
     }
 
-    _RECONNECT_TIMEOUT = 5000
+    _RECONNECT_INITIAL_TIMEOUT = 5000    # 5 seconds
+    _RECONNECT_MAX_TIMEOUT = 300000      # 5 minutes
     _TP_CONN_MANAGER = 'gabble'
     _PROTOCOL = 'jabber'
 
@@ -119,6 +119,9 @@ class TelepathyPlugin(gobject.GObject):
 
         #: GLib source ID indicating when we may try to reconnect
         self._backoff_id = 0
+
+        #: length of the next reconnect timeout
+        self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT
 
         #: Parameters for the connection manager
         self._account = self._get_account_info()
@@ -177,6 +180,16 @@ class TelepathyPlugin(gobject.GObject):
 
         return False
 
+    def _reset_reconnect_timer(self):
+        if self._backoff_id != 0:
+            gobject.source_remove(self._backoff_id)
+
+        self._backoff_id = gobject.timeout_add(self._reconnect_timeout,
+                self._reconnect_cb)
+
+        if self._reconnect_timeout < self._RECONNECT_MAX_TIMEOUT:
+            self._reconnect_timeout *= 2
+
     def _init_connection(self):
         """Set up our connection
 
@@ -212,10 +225,7 @@ class TelepathyPlugin(gobject.GObject):
             def connect_error(e):
                 _logger.debug('%r: Connect() failed: %s', self, e)
                 # we don't allow ourselves to retry more often than this
-                if self._backoff_id != 0:
-                    gobject.source_remove(self._backoff_id)
-                self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
-                        self._reconnect_cb)
+                self._reset_reconnect_timer()
                 self._conn = None
 
             self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
@@ -275,9 +285,7 @@ class TelepathyPlugin(gobject.GObject):
                 # this timer is running also serves as a marker to indicate
                 # that we shouldn't try to go back online yet.
                 if self._backoff_id:
-                    gobject.source_remove(self._backoff_id)
-                    self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
-                            self._reconnect_cb)
+                    self._reset_reconnect_timer()
 
         self.emit('status', self._conn_status, int(reason))
 
