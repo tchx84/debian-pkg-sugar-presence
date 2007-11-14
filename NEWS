@@ -1,3 +1,5 @@
+* #4907: Try to reconnect Gabble if initial attempt failed (cassidy)
+
 Snapshot 89c33bcf93
 
 * #4660: Fix regression when sharing an activity (cassidy)

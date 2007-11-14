@@ -216,6 +216,7 @@ class TelepathyPlugin(gobject.GObject):
                     gobject.source_remove(self._backoff_id)
                 self._backoff_id = gobject.timeout_add(self._RECONNECT_TIMEOUT,
                         self._reconnect_cb)
+                self._conn = None
 
             self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
                                                error_handler=connect_error)
@@ -242,7 +243,7 @@ class TelepathyPlugin(gobject.GObject):
 
         If the connection disappears, stop the plugin.
         """
-        if not dbus_name:
+        if not dbus_name and self._conn is not None:
             _logger.warning(
                 'D-Bus name %s disappeared, this probably means %s crashed',
                 self._conn.service_name, self._TP_CONN_MANAGER)
