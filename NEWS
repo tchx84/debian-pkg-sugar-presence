@@ -1,3 +1,5 @@
+* #4920: Make logging more robust in BuddyHandleJoined (morgs)
+
 Snapshot 128c59c612
 
 * #4936: Enable SSL so we can use DEFLATE compression (robot101)

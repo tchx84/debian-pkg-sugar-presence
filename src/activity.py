@@ -356,7 +356,7 @@ class Activity(ExportedGObject):
         buddy_path -- DBUS path to buddy object
         handle -- buddy handle in this activity
         """
-        _logger.debug('BuddyHandleJoined: %s (handle %u)' % 
+        _logger.debug('BuddyHandleJoined: %s (handle %u)',
                       (buddy_path, handle))
         self.BuddyJoined(buddy_path)
 
