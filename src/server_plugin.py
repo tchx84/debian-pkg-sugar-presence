@@ -286,10 +286,23 @@ class ServerPlugin(TelepathyPlugin):
             self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                 local_pending, '')
 
+        self._add_not_subscribed_to_subscribe_channel()
+
+    def _subscribe_channel_cb(self, channel):
+        TelepathyPlugin._subscribe_channel_cb(self, channel)
+
+        self._add_not_subscribed_to_subscribe_channel()
+
+    def _add_not_subscribed_to_subscribe_channel(self):
+        if self._publish_channel is None or self._subscribe_channel is None:
+            return
+
+        publish_handles, local_pending, remote_pending = \
+                self._publish_channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
+
         # request subscriptions from people subscribed to us if we're
         # not subscribed to them
         not_subscribed = set(publish_handles)
         not_subscribed -= self._subscribe_members
         self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                 not_subscribed, '')
-
