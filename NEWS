@@ -1,3 +1,7 @@
+Snapshot 4c8e8b71b5
+
+* #4896: Make subscribe/presence channel tracking not dependent on which order
+  they appear in
 * #4920: Make logging more robust in BuddyHandleJoined (morgs)
 
 Snapshot 128c59c612
