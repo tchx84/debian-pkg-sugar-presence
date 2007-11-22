@@ -357,7 +357,7 @@ class Activity(ExportedGObject):
         handle -- buddy handle in this activity
         """
         _logger.debug('BuddyHandleJoined: %s (handle %u)',
-                      (buddy_path, handle))
+                      buddy_path, handle)
         self.BuddyJoined(buddy_path)
 
     @dbus.service.signal(_ACTIVITY_INTERFACE,
@@ -713,9 +713,18 @@ class Activity(ExportedGObject):
             if self._valid:
                 op = buddy.object_path()
                 handle = self._buddy_to_handle.get(buddy)
-                _logger.debug('%r: emitting BuddyHandleJoined(%r, %u)',
-                              self, op, handle)
-                self.BuddyHandleJoined(op, handle)
+                # XXX #4920: In rare circumstances the handle is None so
+                #            fall back to BuddyJoined.
+                # FIXME: After Update.1 we need to rework buddy handle
+                #        tracking and design it better.
+                if handle is not None:
+                    _logger.debug('%r: emitting BuddyHandleJoined(%r, %u)',
+                                  self, op, handle)
+                    self.BuddyHandleJoined(op, handle)
+                else:
+                    _logger.debug('%r: emitting BuddyJoined(%r)',
+                                  self, op)
+                    self.BuddyJoined(op)
             else:
                 _logger.debug('Suppressing BuddyJoined: activity %r not '
                               '"valid"', self)
