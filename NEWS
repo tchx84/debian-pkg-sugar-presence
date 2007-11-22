@@ -1,5 +1,6 @@
 * #4920: Harden _add_buddies to cope with no handle when calling
   BuddyHandleJoined (morgs)
+* #4993: Only approve subscriptions coming from a trusted server (cassidy)
 
 Snapshot 4c8e8b71b5
 

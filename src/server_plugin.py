@@ -235,6 +235,32 @@ class ServerPlugin(TelepathyPlugin):
 
         TelepathyPlugin._connected_cb(self)
 
+    def _filter_trusted_server(self, handles):
+        """Filter a list of contact handles removing the one which aren't hosted
+        on a trusted server.
+        This function is used to only accept subscriptions coming from a
+        trusted server.
+
+        :Parameters:
+            `handles` : iterable over (int or long)
+                The contacts' handles to filter
+
+        :Returns: a list of handles
+        """
+        result = []
+        if not handles:
+            return result
+
+        identifiers = self._conn[CONN_INTERFACE].InspectHandles(
+            HANDLE_TYPE_CONTACT, handles)
+
+        for handle, jid in izip(handles, identifiers):
+            user, host = jid.split('@', 1)
+            if self._server_is_trusted(host):
+                result.append(handle)
+
+        return result
+
     def _publish_members_changed_cb(self, message, added, removed,
                                     local_pending, remote_pending,
                                     actor, reason):
@@ -242,6 +268,7 @@ class ServerPlugin(TelepathyPlugin):
             added, removed, local_pending, remote_pending, actor,
             reason)
 
+        local_pending = self._filter_trusted_server(local_pending)
         if local_pending:
             # accept all requested subscriptions
             self._publish_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
@@ -251,6 +278,7 @@ class ServerPlugin(TelepathyPlugin):
         if self._subscribe_channel is not None:
             added = list(set(added) - self._subscribe_members
                          - self._subscribe_remote_pending)
+            added = self._filter_trusted_server(added)
             if added:
                 self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                         added, '')
@@ -280,6 +308,7 @@ class ServerPlugin(TelepathyPlugin):
         publish_handles, local_pending, remote_pending = \
             self._publish_channel[CHANNEL_INTERFACE_GROUP].GetAllMembers()
 
+        local_pending = self._filter_trusted_server(local_pending)
         if local_pending:
             # accept pending subscriptions
             # FIXME: do this async
@@ -304,5 +333,7 @@ class ServerPlugin(TelepathyPlugin):
         # not subscribed to them
         not_subscribed = set(publish_handles)
         not_subscribed -= self._subscribe_members
-        self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
-                not_subscribed, '')
+        not_subscribed = self._filter_trusted_server(not_subscribed)
+        if not_subscribed:
+            self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                    not_subscribed, '')
