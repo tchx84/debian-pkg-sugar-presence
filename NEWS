@@ -1,3 +1,5 @@
+Snapshot 5650e153bd
+
 * #4965: Add SyncFriends method as temporary measure for synchronising friends
   list to roster group on Jabber server.
 
