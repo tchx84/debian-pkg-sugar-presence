@@ -834,6 +834,11 @@ class PresenceService(ExportedGObject):
         else:
             activity.set_properties(props)
 
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature="as",
+            out_signature="")
+    def SyncFriends(self, keys):
+        if self._server_plugin is not None:
+            self._server_plugin.sync_friends(keys)
 
 def main(test_num=0, randomize=False):
     loop = gobject.MainLoop()

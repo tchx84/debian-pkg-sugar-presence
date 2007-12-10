@@ -17,20 +17,23 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 # Standard library
+import base64
 import logging
+import os
 from itertools import izip
 from string import hexdigits
 
 # Other libraries
 import dbus
 import gobject
-from telepathy.client import (ConnectionManager, Connection)
+from telepathy.client import (ConnectionManager, Connection, Channel)
 from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
-    CHANNEL_INTERFACE_GROUP)
-from telepathy.constants import (HANDLE_TYPE_CONTACT,
+    CHANNEL_INTERFACE_GROUP, CHANNEL_TYPE_CONTACT_LIST)
+from telepathy.constants import (HANDLE_TYPE_CONTACT, HANDLE_TYPE_GROUP,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
     CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
     CONNECTION_STATUS_REASON_NAME_IN_USE)
+import sugar.profile
 
 # Presence Service local modules
 import psutils
@@ -56,6 +59,8 @@ class ServerPlugin(TelepathyPlugin):
 
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
+
+        self._friends_channel = None
 
     def _ip4_address_changed_cb(self, ip4am, address):
         TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address)
@@ -235,6 +240,21 @@ class ServerPlugin(TelepathyPlugin):
 
         TelepathyPlugin._connected_cb(self)
 
+        # request Friends group channel
+        def friends_channel_requested_cb(friends_chan_path):
+            self._friends_channel = Channel(self._conn.service_name,
+                    friends_chan_path)
+
+        def error_requesting_friends_channel(e):
+            _logger.debug('error requesting friends channel: %r' % e)
+
+        handles = self._conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_GROUP,
+                ["Friends"])
+        self._conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_CONTACT_LIST,
+                HANDLE_TYPE_GROUP, handles[0], True,
+                reply_handler=friends_channel_requested_cb,
+                error_handler=error_requesting_friends_channel)
+
     def _filter_trusted_server(self, handles):
         """Filter a list of contact handles removing the one which aren't hosted
         on a trusted server.
@@ -337,3 +357,55 @@ class ServerPlugin(TelepathyPlugin):
         if not_subscribed:
             self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                     not_subscribed, '')
+
+    def sync_friends(self, keys):
+        if self._friends_channel is None or self._subscribe_channel is None:
+            # not ready yet
+            return
+
+        config_path = os.path.join(sugar.env.get_profile_path(), 'config')
+        profile = sugar.profile.Profile(config_path)
+
+        friends_handles = set()
+        friends = set()
+        for key in keys:
+            try:
+               decoded = base64.b64decode(key)
+            except TypeError:
+                # key is invalid; skip this friend
+                _logger.debug('skipping friend with invalid key')
+                continue
+
+            id = psutils.pubkey_to_keyid(decoded)
+            # this assumes that all our friends are on the same server as us
+            jid = '%s@%s' % (id, profile.jabber_server)
+            friends.add(jid)
+
+        def error_syncing_friends(e):
+            _logger.debug('error syncing friends: %r' % e)
+
+        def friends_group_synced():
+            _logger.debug('friends group synced')
+
+        def friends_subscribed():
+            _logger.debug('friends subscribed')
+
+        def got_friends_handles(handles):
+            friends_handles.update(handles)
+
+            # subscribe friends
+            self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                friends_handles, "New friend",
+                reply_handler=friends_subscribed,
+                error_handler=error_syncing_friends)
+
+            # add friends to the "Friends" group
+            self._friends_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
+                friends_handles, "New friend",
+                reply_handler=friends_group_synced,
+                error_handler=error_syncing_friends)
+
+        self._conn[CONN_INTERFACE].RequestHandles(
+            HANDLE_TYPE_CONTACT, friends,
+            reply_handler=got_friends_handles,
+            error_handler=error_syncing_friends)
