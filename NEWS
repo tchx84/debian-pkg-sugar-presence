@@ -1,3 +1,5 @@
+* #5368: Delay setting a buddy's current activity (morgs)
+
 Snapshot 150051a3a9
 
 * #4920: Harden _add_buddies to cope with no handle when calling

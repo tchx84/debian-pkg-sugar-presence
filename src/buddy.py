@@ -596,7 +596,9 @@ class Buddy(ExportedGObject):
         # Telepathy connection
         if current_activity or self._current_activity_plugin is tp:
             self._current_activity_plugin = tp
-            self.set_properties({_PROP_CURACT: current_activity})
+            gobject.timeout_add(500, 
+                lambda: self.set_properties(
+                    {_PROP_CURACT: current_activity}))
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         """Handle update of the avatar"""
