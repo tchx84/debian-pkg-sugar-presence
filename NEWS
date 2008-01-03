@@ -1,3 +1,6 @@
+
+* #5368: Delay setting a buddy's current activity (morgs)
+
 Snapshot 5650e153bd
 
 * #4965: Add SyncFriends method as temporary measure for synchronising friends
