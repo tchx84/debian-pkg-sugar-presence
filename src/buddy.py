@@ -568,6 +568,11 @@ class Buddy(ExportedGObject):
         self.set_properties(props)
         # If the properties didn't contain the key or color, then we're never
         # going to get one.
+
+        # Buddy need a key to be valid
+        if self._key is None:
+            return
+
         try:
             self._awaiting.remove('properties')
         except KeyError:
