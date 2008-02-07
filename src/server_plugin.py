@@ -310,14 +310,16 @@ class ServerPlugin(TelepathyPlugin):
         if status == self._conn_status:
             return
 
-        if (status == CONNECTION_STATUS_DISCONNECTED and
-            reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and
-            not self._account['register']):
-            _logger.debug('Authentication failed. Trying to register the account')
-            self._account['register'] = True
-            self._stop()
-            self._init_connection()
-            return
+        if status == CONNECTION_STATUS_DISCONNECTED:
+            if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and \
+                    not self._account['register']:
+                _logger.debug('Authentication failed. Trying to register the account')
+                self._account['register'] = True
+                self._stop()
+                self._init_connection()
+                return
+            else:
+                self._account['register'] = False
 
         TelepathyPlugin._handle_connection_status_change(self, status, reason)
 
