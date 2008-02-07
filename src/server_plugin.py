@@ -306,7 +306,11 @@ class ServerPlugin(TelepathyPlugin):
         """Override TelepathyPlugin implementation to manage connection errors
         due to authentication problem. If the connection fails because of an
         authentication error that's probably because the account isn't
-        registered yet on the server. So we try to register it."""
+        registered yet on the server. So we try to register it.
+        If it fails because any other reason we unset the register flag so futur
+        connection attempts won't try to register until we got a new
+        authentication error. This should properly handle the "XO having to use
+        different jabber servers" use case."""
         if status == self._conn_status:
             return
 
