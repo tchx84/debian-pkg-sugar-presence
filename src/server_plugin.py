@@ -78,7 +78,7 @@ class ServerPlugin(TelepathyPlugin):
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account.
         We first try to connect without the register flag. If the connection
-        fails because of an authentification error we'll try to register
+        fails because of an authentication error we'll try to register
         the account.
         """
         server = self._owner.get_server()
@@ -304,8 +304,8 @@ class ServerPlugin(TelepathyPlugin):
 
     def _handle_connection_status_change(self, status, reason):
         """Override TelepathyPlugin implementation to manage connection errors
-        due to authentification problem. If the connection fails because of an
-        authentification error that's probably because the account isn't
+        due to authentication problem. If the connection fails because of an
+        authentication error that's probably because the account isn't
         registered yet on the server. So we try to register it."""
         if status == self._conn_status:
             return
@@ -313,7 +313,7 @@ class ServerPlugin(TelepathyPlugin):
         if (status == CONNECTION_STATUS_DISCONNECTED and
             reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and
             not self._account['register']):
-            _logger.debug('Authentification failed. Try to register the account')
+            _logger.debug('Authentication failed. Trying to register the account')
             self._account['register'] = True
             self._stop()
             self._init_connection()
