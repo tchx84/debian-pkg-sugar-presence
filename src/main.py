@@ -31,38 +31,33 @@ _logger = logging.getLogger('s-p-s')
 def usage():
     _logger.debug("Usage: sugar-presence-service [<test buddy number (1 - 10)>] [randomize]")
 
-if not os.environ.has_key('SUGAR_PREFIX'):
-	print 'SUGAR_PREFIX must be set.'
-	sys.exit(0)
 
-prefix = os.environ['SUGAR_PREFIX']
-sys.path.append(os.path.join(prefix, 'share/sugar-presence-service'))
+def main():
+	test_num = 0
+	randomize = False
+	if len(sys.argv) in [2, 3]:
+	    try:
+	        test_num = int(sys.argv[1])
+	    except ValueError:
+	        _logger.debug("Bad test user number.")
+	    if test_num < 1 or test_num > 10:
+	        _logger.debug("Bad test user number.")
 
-test_num = 0
-randomize = False
-if len(sys.argv) in [2, 3]:
-    try:
-        test_num = int(sys.argv[1])
-    except ValueError:
-        _logger.debug("Bad test user number.")
-    if test_num < 1 or test_num > 10:
-        _logger.debug("Bad test user number.")
+	    if len(sys.argv) == 3 and sys.argv[2] == "randomize":
+	        randomize = True
+	elif len(sys.argv) == 1:
+	    pass
+	else:
+	    usage()
+	    os._exit(1)
 
-    if len(sys.argv) == 3 and sys.argv[2] == "randomize":
-        randomize = True
-elif len(sys.argv) == 1:
-    pass
-else:
-    usage()
-    os._exit(1)
+	if test_num > 0:
+	    logger.start('test-%d-presenceservice' % test_num)
+	else:
+	    logger.start('presenceservice')
 
-if test_num > 0:
-    logger.start('test-%d-presenceservice' % test_num)
-else:
-    logger.start('presenceservice')
+	import presenceservice
 
-import presenceservice
+	_logger.info('Starting presence service...')
 
-_logger.info('Starting presence service...')
-
-presenceservice.main(test_num, randomize)
+	presenceservice.main(test_num, randomize)

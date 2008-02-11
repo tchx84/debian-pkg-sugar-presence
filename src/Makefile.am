@@ -15,13 +15,14 @@ psdata_PYTHON = \
 	buddy.py \
 	buddyiconcache.py \
 	linklocal_plugin.py \
+        main.py \
 	presenceservice.py \
 	pstest.py \
 	psutils.py \
 	server_plugin.py \
 	telepathy_plugin.py
 
-dist_bin_SCRIPTS = sugar-presence-service
+bin_SCRIPTS = sugar-presence-service
 
 DISTCLEANFILES = $(service_DATA)
 
