@@ -62,8 +62,8 @@ class ServerPlugin(TelepathyPlugin):
 
         self._friends_channel = None
 
-    def _ip4_address_changed_cb(self, ip4am, address):
-        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address)
+    def _ip4_address_changed_cb(self, ip4am, address, iface):
+        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
 
         if address:
             _logger.debug("::: valid IP4 address, conn_status %s" %

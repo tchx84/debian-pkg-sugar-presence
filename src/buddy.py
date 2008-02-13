@@ -907,7 +907,7 @@ class GenericOwner(Buddy):
                 if tp.status == CONNECTION_STATUS_CONNECTED:
                     self._set_self_olpc_properties(tp)
 
-    def _ip4_address_changed_cb(self, monitor, address):
+    def _ip4_address_changed_cb(self, monitor, address, iface):
         """Handle IPv4 address change, set property to generate event"""
         props = {_PROP_IP4_ADDRESS: address}
         self.set_properties(props)

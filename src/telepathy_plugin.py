@@ -555,7 +555,7 @@ class TelepathyPlugin(gobject.GObject):
         else:
             _logger.debug('%r: Postponing connection', self)
 
-    def _ip4_address_changed_cb(self, ip4am, address):
+    def _ip4_address_changed_cb(self, ip4am, address, iface):
         _logger.debug("::: IP4 address now %s", address)
 
         self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT
