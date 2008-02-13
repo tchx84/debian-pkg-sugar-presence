@@ -163,9 +163,6 @@ class TelepathyPlugin(gobject.GObject):
         """
         raise NotImplementedError
 
-    def start(self):
-        raise NotImplementedError
-
     def suggest_room_for_activity(self, activity_id):
         """Suggest a room to use to share the given activity.
         """
@@ -340,6 +337,7 @@ class TelepathyPlugin(gobject.GObject):
             self._backoff_id = 0
 
         self._ip4am.disconnect(self._ip4am_sigid)
+        self._ip4am_sigid = 0
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -544,6 +542,11 @@ class TelepathyPlugin(gobject.GObject):
         otherwise initiate a connection and transfer control to
             _connect_reply_cb or _connect_error_cb
         """
+
+        if self._ip4am_sigid == 0:
+            self._ip4am_sigid = self._ip4am.connect('address-changed',
+                    self._ip4_address_changed_cb)
+
         if self._conn is not None:
             return
 
