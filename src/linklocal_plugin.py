@@ -78,7 +78,7 @@ class LinkLocalPlugin(TelepathyPlugin):
                 else:
                     _logger.info('Avahi appeared on the system bus (%s) - '
                                  'starting...', unique_name)
-                    self.start()
+                    self.emit('want-to-connect')
         else:
             self._have_avahi = False
             if had_avahi:
@@ -207,7 +207,7 @@ class LinkLocalPlugin(TelepathyPlugin):
             self._have_to_wait_id = 0
 
         _logger.debug("Timeout elapsed. Salut can connect now")
-        self.start()
+        self.emit('want-to-connect')
 
     def _ip4_address_changed_cb(self, ip4am, address, iface):
         TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
