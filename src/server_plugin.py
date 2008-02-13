@@ -70,7 +70,7 @@ class ServerPlugin(TelepathyPlugin):
                           self._conn_status)
             # this is a no-op if starting would be inappropriate right now
             if self._conn_status != CONNECTION_STATUS_CONNECTED:
-                self.start()
+                self.emit('want-to-connect')
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
             self._stop()
