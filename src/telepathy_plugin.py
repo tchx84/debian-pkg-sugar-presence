@@ -75,6 +75,10 @@ class TelepathyPlugin(gobject.GObject):
             # args:
             #   channel object path
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
+        'want-to-connect':
+            # The TelepathyPlugin wants to connect. presenceservice.py will
+            # call the start() method if that's OK with its policy.
+            (gobject.SIGNAL_RUN_FIRST, None, []),
     }
 
     _RECONNECT_INITIAL_TIMEOUT = 5000    # 5 seconds
