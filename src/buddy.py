@@ -23,6 +23,8 @@ try:
     from hashlib import md5 as new_md5
 except ImportError:
     from md5 import new as new_md5
+from hashlib import sha256
+from base64 import b64encode
 
 import gobject
 import dbus
@@ -955,7 +957,7 @@ class ShellOwner(GenericOwner):
 
         server = profile.jabber_server
         key_hash = profile.privkey_hash
-        key = profile.pubkey
+        key = b64encode(sha256(profile.pubkey).digest())
         nick = profile.nick_name
         color = profile.color.to_string()
 
