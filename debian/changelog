@@ -1,5 +1,5 @@
-sugar-presence-service (0.79.0-0) UNRELEASED; urgency=low
+sugar-presence-service (0.79.0-1) UNRELEASED; urgency=low
 
-  * Initial unofficial release.
+  * Initial release. Closes: bug#444021.
 
- -- Jonas Smedegaard <dr@jones.dk>  Sat, 08 Mar 2008 21:18:07 +0100
+ -- Jonas Smedegaard <dr@jones.dk>  Sat, 08 Mar 2008 21:20:06 +0100

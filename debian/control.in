@@ -1,0 +1,24 @@
+Source: sugar-presence-service
+Section: x11
+Priority: optional
+Maintainer: Jonas Smedegaard <dr@jones.dk>
+Build-Depends: @cdbs@
+Standards-Version: 3.7.3
+Vcs-Git: git://git.debian.org/git/collab-maint/sugar-presence-service.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/sugar-presence-service.git;a=summary
+Homepage: http://wiki.laptop.org/go/Sugar
+XS-Python-Version: all
+
+Package: sugar-presence-service
+Architecture: any
+Depends: ${shlibs:Depends}, ${python:Depends}
+Recommends: sugar
+Provides: ${python:Provides}
+XB-Python-Version: ${python:Versions}
+Description: Sugar graphical shell - presence service
+ Sugar is a graphical user interface aimed at children.
+ .
+ Sugar is mainly used as the interface for One Laptop Per Child (OLPC)
+ XO machines.
+ .
+ This package contains the presence service.

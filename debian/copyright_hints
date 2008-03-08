@@ -1,0 +1,12 @@
+*No copyright* UNKNOWN []: Makefile.am, NEWS, configure.ac, src/Makefile.am, src/__init__.py, src/test_psutils.py
+GPL-2+ [2007, Collabora Ltd / 2007, Red Hat, Inc]: src/activity.py, src/buddy.py, src/buddyiconcache.py, src/linklocal_plugin.py, src/server_plugin.py, src/telepathy_plugin.py
+GPL-2+ [2007, Red Hat, Inc / 2007 Collabora Ltd. <http://www.collabora.co.uk/>]: src/presenceservice.py, src/pstest.py, src/psutils.py
+GENERATED FILE [1994-2002]: Makefile.in, src/Makefile.in
+GENERATED FILE [1992-1996, 1998-2001]: configure
+GPL GENERATED FILE [1996-1997, 1999-2000, 2002-2005]: missing
+GPL GENERATED FILE [2000-2001, 2003-2005 Free Software Foundation, Inc]: py-compile
+GPL-2+ [2006, Red Hat, Inc]: src/main.py
+GPL-2+ [2008, Red Hat, Inc]: src/sugar-presence-service.in
+MIT/X11 (BSD like) [and license / notice and this permission notice shall be included in / 1994 X Consortium]: install-sh
+UNKNOWN [1989, 1991 Free Software Foundation, Inc. / the software, and]: COPYING
+UNKNOWN [2002-2003, 2005 Free Software Foundation, Inc / 1996-2004 / 2001, 2003, 2005 Free Software Foundation, Inc]: aclocal.m4
