@@ -75,10 +75,6 @@ class TelepathyPlugin(gobject.GObject):
             # args:
             #   channel object path
             (gobject.SIGNAL_RUN_FIRST, None, [object]),
-        'want-to-connect':
-            # The TelepathyPlugin wants to connect. presenceservice.py will
-            # call the start() method if that's OK with its policy.
-            (gobject.SIGNAL_RUN_FIRST, None, []),
     }
 
     _RECONNECT_INITIAL_TIMEOUT = 5000    # 5 seconds
@@ -165,6 +161,9 @@ class TelepathyPlugin(gobject.GObject):
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
         """
+        raise NotImplementedError
+
+    def start(self):
         raise NotImplementedError
 
     def suggest_room_for_activity(self, activity_id):
@@ -341,7 +340,6 @@ class TelepathyPlugin(gobject.GObject):
             self._backoff_id = 0
 
         self._ip4am.disconnect(self._ip4am_sigid)
-        self._ip4am_sigid = 0
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -546,11 +544,6 @@ class TelepathyPlugin(gobject.GObject):
         otherwise initiate a connection and transfer control to
             _connect_reply_cb or _connect_error_cb
         """
-
-        if self._ip4am_sigid == 0:
-            self._ip4am_sigid = self._ip4am.connect('address-changed',
-                    self._ip4_address_changed_cb)
-
         if self._conn is not None:
             return
 
@@ -562,7 +555,7 @@ class TelepathyPlugin(gobject.GObject):
         else:
             _logger.debug('%r: Postponing connection', self)
 
-    def _ip4_address_changed_cb(self, ip4am, address, iface):
+    def _ip4_address_changed_cb(self, ip4am, address):
         _logger.debug("::: IP4 address now %s", address)
 
         self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT

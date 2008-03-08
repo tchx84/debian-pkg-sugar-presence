@@ -129,7 +129,7 @@ class IP4AddressMonitor(gobject.GObject):
 
     __gsignals__ = {
         'address-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                               ([gobject.TYPE_PYOBJECT, gobject.TYPE_STRING]))
+                               ([gobject.TYPE_PYOBJECT]))
     }
 
     __gproperties__ = {
@@ -155,22 +155,22 @@ class IP4AddressMonitor(gobject.GObject):
         sys_bus = dbus.SystemBus()
         self._watch = sys_bus.watch_name_owner(NM_SERVICE, self._nm_owner_cb)
         if not sys_bus.name_has_owner(NM_SERVICE):
-            addr, iface = self._get_address_fallback()
-            self._update_address(addr, iface)
+            addr = self._get_address_fallback()
+            self._update_address(addr)
 
     def do_get_property(self, pspec):
         if pspec.name == "address":
             return self._addr
 
-    def _update_address(self, new_addr, iface):
+    def _update_address(self, new_addr):
         if new_addr == "0.0.0.0":
             new_addr = None
         if new_addr == self._addr:
             return
 
         self._addr = new_addr
-        _logger.debug("IP4 address now '%s' (%s)" % (new_addr, iface))
-        self.emit('address-changed', new_addr, iface)
+        _logger.debug("IP4 address now '%s'" % new_addr)
+        self.emit('address-changed', new_addr)
 
     def _connect_to_nm(self):
         """Connect to NM device state signals to tell when the IPv4 address changes"""
@@ -215,7 +215,7 @@ class IP4AddressMonitor(gobject.GObject):
         if act_stage != 8 and act_stage != 7:
             # not activated
             return
-        self._update_address(props[6], props[1])
+        self._update_address(props[6])
 
     def _device_properties_error_cb(self, err):
         _logger.debug("Error querying device properties: %s" % err)
@@ -244,11 +244,11 @@ class IP4AddressMonitor(gobject.GObject):
         self._query_device_properties(device)
 
     def _nm_device_no_longer_active_cb(self, device):
-        self._update_address(None, None)
+        self._update_address(None)
 
     def _nm_state_change_cb(self, new_state):
         if new_state == 4: # NM_STATE_DISCONNECTED
-            self._update_address(None, None)
+            self._update_address(None)
 
     def _nm_owner_cb(self, unique_name):
         """Clear state when NM goes away"""
@@ -259,10 +259,10 @@ class IP4AddressMonitor(gobject.GObject):
                 match.remove()
             self._matches = []
             if self._nm_has_been_present:
-                self._update_address(None, None)
+                self._update_address(None)
             else:
-                addr, iface = self._get_address_fallback()
-                self._update_address(addr, iface)
+                addr = self._get_address_fallback()
+                self._update_address(addr)
         elif not self._nm_present:
             # NM started up
             self._nm_present = True
@@ -278,7 +278,7 @@ class IP4AddressMonitor(gobject.GObject):
         SIOCGIFADDR = 0x8915
         addr = fcntl.ioctl(fd, SIOCGIFADDR, struct.pack('256s', iface[:15]))[20:24]
         s.close()
-        return socket.inet_ntoa(addr), iface
+        return socket.inet_ntoa(addr)
 
     def _get_address_fallback(self):
         import commands
@@ -290,4 +290,4 @@ class IP4AddressMonitor(gobject.GObject):
             if fields[0] == "0.0.0.0":
                 iface = fields[len(fields) - 1]
                 return self._get_iface_address(iface)
-        return None, None
+        return None

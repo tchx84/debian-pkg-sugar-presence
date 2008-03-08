@@ -23,8 +23,6 @@ try:
     from hashlib import md5 as new_md5
 except ImportError:
     from md5 import new as new_md5
-from hashlib import sha256
-from base64 import b64encode
 
 import gobject
 import dbus
@@ -662,6 +660,7 @@ class GenericOwner(Buddy):
         self._ps = ps
         self._server = kwargs.pop("server", None)
         self._key_hash = kwargs.pop("key_hash", None)
+        self._registered = kwargs.pop("registered", False)
 
         #: Telepathy plugin -> dict { activity ID -> room handle }
         self._activities_by_connection = {}
@@ -908,10 +907,14 @@ class GenericOwner(Buddy):
                 if tp.status == CONNECTION_STATUS_CONNECTED:
                     self._set_self_olpc_properties(tp)
 
-    def _ip4_address_changed_cb(self, monitor, address, iface):
+    def _ip4_address_changed_cb(self, monitor, address):
         """Handle IPv4 address change, set property to generate event"""
         props = {_PROP_IP4_ADDRESS: address}
         self.set_properties(props)
+
+    def get_registered(self):
+        """Retrieve whether owner has registered with presence server"""
+        return self._registered
 
     def get_server(self):
         """Retrieve XMPP server hostname (used by the server plugin)"""
@@ -922,6 +925,10 @@ class GenericOwner(Buddy):
         as a password)
         """
         return self._key_hash
+
+    def set_registered(self, registered):
+        """Customisation point: handle the registration of the owner"""
+        raise RuntimeError("Subclasses must implement")
 
     def update_avatar(self, tp, new_avatar_token, icon=None, mime_type=None):
         # This should never get called because Owner avatar changes are
@@ -956,8 +963,9 @@ class ShellOwner(GenericOwner):
         profile = get_profile()
 
         server = profile.jabber_server
+        registered = profile.jabber_registered
         key_hash = profile.privkey_hash
-        key = b64encode(sha256(profile.pubkey).digest())
+        key = profile.pubkey
         nick = profile.nick_name
         color = profile.color.to_string()
 
@@ -969,7 +977,7 @@ class ShellOwner(GenericOwner):
         GenericOwner.__init__(self, ps, bus,
                 'keyid/' + psutils.pubkey_to_keyid(key),
                 key=key, nick=nick, color=color, icon=icon, server=server,
-                key_hash=key_hash)
+                key_hash=key_hash, registered=registered)
 
         # Ask to get notifications on Owner object property changes in the
         # shell. If it's not currently running, no problem - we'll get the
@@ -985,6 +993,13 @@ class ShellOwner(GenericOwner):
 
         # we already know our own nick, color, key
         self._awaiting = None
+
+    def set_registered(self, value):
+        """Handle notification that we have been registered"""
+        if value:
+            profile = get_profile()
+            profile.jabber_registered = True
+            profile.save()
 
     def _icon_changed_cb(self, icon):
         """Handle icon change, set property to generate event"""
