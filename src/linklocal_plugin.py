@@ -62,10 +62,6 @@ class LinkLocalPlugin(TelepathyPlugin):
         self._watch = self._sys_bus.watch_name_owner('org.freedesktop.Avahi',
                                                      self._avahi_owner_cb)
 
-        # Glib source ID indicating we have to wait before be allowed to try
-        # to connect
-        self._have_to_wait_id = 0
-
     def _avahi_owner_cb(self, unique_name):
         had_avahi = self._have_avahi
 
@@ -78,7 +74,7 @@ class LinkLocalPlugin(TelepathyPlugin):
                 else:
                     _logger.info('Avahi appeared on the system bus (%s) - '
                                  'starting...', unique_name)
-                    self.emit('want-to-connect')
+                    self.start()
         else:
             self._have_avahi = False
             if had_avahi:
@@ -93,8 +89,7 @@ class LinkLocalPlugin(TelepathyPlugin):
         self._watch = None
 
     def _could_connect(self):
-        return TelepathyPlugin._could_connect(self) and self._have_avahi and \
-                self._have_to_wait_id == 0
+        return TelepathyPlugin._could_connect(self) and self._have_avahi
 
     def _get_account_info(self):
         """Retrieve connection manager parameters for this account
@@ -199,26 +194,3 @@ class LinkLocalPlugin(TelepathyPlugin):
                 ret[handle] = 'salut/' + psutils.escape_identifier(ident)
 
         return ret
-
-
-    def _have_to_wait_cb(self):
-        if self._have_to_wait_id > 0:
-            gobject.source_remove(self._have_to_wait_id)
-            self._have_to_wait_id = 0
-
-        _logger.debug("Timeout elapsed. Salut can connect now")
-        self.emit('want-to-connect')
-
-    def _ip4_address_changed_cb(self, ip4am, address, iface):
-        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
-
-        # FIXME: what about IPv6 ?
-        if iface == "msh0" and not address.startswith("169.254."):
-            # msh0 got a not link-local IP so we are connected to a school
-            # server.  Let's disable Salut. See #6299 for details.
-            _logger.debug("Connected to a school server. Disable Salut")
-            self._stop()
-
-            # Salut can't connect during the next 2 minutes
-            self._have_to_wait_id = gobject.timeout_add(120000,
-                    self._have_to_wait_cb)
