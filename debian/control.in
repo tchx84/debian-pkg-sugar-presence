@@ -10,7 +10,7 @@ Homepage: http://wiki.laptop.org/go/Sugar
 XS-Python-Version: all
 
 Package: sugar-presence-service
-Architecture: any
+Architecture: all
 Depends: ${shlibs:Depends}, ${python:Depends}
 Recommends: sugar
 Provides: ${python:Provides}

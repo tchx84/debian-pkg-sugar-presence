@@ -1,3 +1,9 @@
+sugar-presence-service (0.79.0-2) unstable; urgency=low
+
+  * Build binary package as arch-all.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Sun, 09 Mar 2008 01:02:34 +0100
+
 sugar-presence-service (0.79.0-1) unstable; urgency=low
 
   * Initial release. Closes: bug#444021.
