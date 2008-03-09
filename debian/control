@@ -11,7 +11,7 @@ XS-Python-Version: all
 
 Package: sugar-presence-service
 Architecture: all
-Depends: ${shlibs:Depends}, ${python:Depends}
+Depends: ${shlibs:Depends}, ${python:Depends}, python-gobject, python-dbus (>= 0.82.0), python-telepathy, sugar-toolkit, openssh-client, telepathy-gabble, telepathy-salut
 Recommends: sugar
 Provides: ${python:Provides}
 XB-Python-Version: ${python:Versions}
