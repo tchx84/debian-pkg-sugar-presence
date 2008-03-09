@@ -2,8 +2,9 @@ sugar-presence-service (0.79.0-2) UNRELEASED; urgency=low
 
   * Build binary package as arch-all.
   * Depend on python-gobject, python-dbus (new enough for reliable PS),
-    python-telepathy, sugar-toolkit, telepathy-gabble, telepathy-salut
-    and openssh-client.
+    python-telepathy, sugar-toolkit, telepathy-gabble, telepathy-salut,
+    telepathy-stream-engine and openssh-client.
+  * Recommend sugar and avahi-daemon.
 
  -- Jonas Smedegaard <dr@jones.dk>  Sun, 09 Mar 2008 01:02:34 +0100
 

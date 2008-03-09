@@ -11,8 +11,8 @@ XS-Python-Version: all
 
 Package: sugar-presence-service
 Architecture: all
-Depends: ${shlibs:Depends}, ${python:Depends}, python-gobject, python-dbus (>= 0.82.0), python-telepathy, sugar-toolkit, openssh-client, telepathy-gabble, telepathy-salut
-Recommends: sugar
+Depends: ${shlibs:Depends}, ${python:Depends}, python-gobject, python-dbus (>= 0.82.0), python-telepathy, sugar-toolkit, openssh-client, telepathy-gabble, telepathy-salut, telepathy-stream-engine
+Recommends: sugar, avahi-daemon
 Provides: ${python:Provides}
 XB-Python-Version: ${python:Versions}
 Description: Sugar graphical shell - presence service
