@@ -5,6 +5,7 @@ sugar-presence-service (0.79.0-2) UNRELEASED; urgency=low
     python-telepathy, sugar-toolkit, telepathy-gabble, telepathy-salut,
     telepathy-stream-engine and openssh-client.
   * Recommend sugar and avahi-daemon.
+  * Fix watch file.
 
  -- Jonas Smedegaard <dr@jones.dk>  Sun, 09 Mar 2008 01:02:34 +0100
 
