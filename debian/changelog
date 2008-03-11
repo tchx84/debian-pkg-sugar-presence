@@ -1,5 +1,7 @@
 sugar-presence-service (0.79.0-3) UNRELEASED; urgency=low
 
+  * Pass over maintenance of the package to the OLPC team: Change
+    Maintainer, and add myself to Uploaders.
   * Build-depend on python-all-dev (not python-dev).
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 11 Mar 2008 03:11:51 +0100
