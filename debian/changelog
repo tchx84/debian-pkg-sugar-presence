@@ -1,3 +1,9 @@
+sugar-presence-service (0.79.0-3) UNRELEASED; urgency=low
+
+  * Build-depend on python-all-dev (not python-dev).
+
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 11 Mar 2008 03:11:51 +0100
+
 sugar-presence-service (0.79.0-2) unstable; urgency=low
 
   * Build binary package as arch-all.

@@ -21,7 +21,7 @@ binary-install/$(pkg)::
 	dh_pycentral
 
 # Needed by upstream build process
-CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dev
+CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-all-dev
 
 # Needed by upstream unittests
 CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dbus, python-gobject
