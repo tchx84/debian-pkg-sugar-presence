@@ -1,4 +1,4 @@
-sugar-presence-service (0.79.0-2) UNRELEASED; urgency=low
+sugar-presence-service (0.79.0-2) unstable; urgency=low
 
   * Build binary package as arch-all.
   * Depend on python-gobject, python-dbus (new enough for reliable PS),
@@ -7,7 +7,7 @@ sugar-presence-service (0.79.0-2) UNRELEASED; urgency=low
   * Recommend sugar and avahi-daemon.
   * Fix watch file.
 
- -- Jonas Smedegaard <dr@jones.dk>  Sun, 09 Mar 2008 01:02:34 +0100
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 11 Mar 2008 02:59:38 +0100
 
 sugar-presence-service (0.79.0-1) unstable; urgency=low
 
