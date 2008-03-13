@@ -374,14 +374,7 @@ class ServerPlugin(TelepathyPlugin):
         friends_handles = set()
         friends = set()
         for key in keys:
-            try:
-               decoded = base64.b64decode(key)
-            except TypeError:
-                # key is invalid; skip this friend
-                _logger.debug('skipping friend with invalid key')
-                continue
-
-            id = psutils.pubkey_to_keyid(decoded)
+            id = psutils.pubkey_to_keyid(key)
             # this assumes that all our friends are on the same server as us
             jid = '%s@%s' % (id, profile.jabber_server)
             friends.add(jid)
