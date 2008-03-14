@@ -7,8 +7,7 @@ sugar-presence-service (0.79.0-3) UNRELEASED; urgency=low
   * Depend on python-sugar-toolkit (not sugar-toolkit).
   * Update CDBS tweaks:
     + Add local py-compile.mk and python-vars.mk to handle autotools-
-      based Python compilation.  This adds suppurt also for non-default
-      Python versions.
+      based Python compilation.
     + Add local autotools.mk, autotools-vars.mk, makefile.mk and
       makefile-vars.mk providing multi-flavor build support needed by
       py-compile.mk.
