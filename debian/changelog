@@ -4,6 +4,7 @@ sugar-presence-service (0.79.0-3) UNRELEASED; urgency=low
     Maintainer, and add myself to Uploaders.
   * Build-depend on python-all-dev (not python-dev).
   * Fix README.packaging to use "pull; fetch --tags" (not "pull -t").
+  * Depend on python-sugar-toolkit (not sugar-toolkit).
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 11 Mar 2008 09:45:18 +0100
 
