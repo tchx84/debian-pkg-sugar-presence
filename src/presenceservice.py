@@ -125,6 +125,7 @@ class PresenceService(ExportedGObject):
                                         self._activity_invitation)
             tp.connect('private-invitation',
                                         self._private_invitation)
+            tp.connect('want-to-connect', self._want_to_connect)
             tp.start()
 
         self._contacts_online_queue = []
@@ -148,9 +149,12 @@ class PresenceService(ExportedGObject):
     def _tp_status_cb(self, plugin, status, reason):
         if status == CONNECTION_STATUS_CONNECTED:
             self._tp_connected(plugin)
-            if plugin == self._server_plugin and self._ll_plugin:
+            if (plugin == self._server_plugin and self._ll_plugin) or \
+                (plugin == self._ll_plugin and self._server_plugin and \
+                    self._server_plugin.status == CONNECTION_STATUS_CONNECTED):
                 # For now, Gabble takes precedence over Salut to alleviate
                 # corner cases where laptops on mesh can't talk to ones on APs
+                _logger.debug("Gabble takes precedence, disconnect Salut")
                 self._ll_plugin.cleanup()
         else:
             self._tp_disconnected(plugin)
@@ -568,6 +572,19 @@ class PresenceService(ExportedGObject):
         conn = tp.get_connection()
         self.PrivateInvitation(str(conn.service_name), conn.object_path,
                                chan_path)
+
+    def _want_to_connect(self, plugin):
+        if plugin == self._ll_plugin:
+            # Link-local plugin can connect only if the Server plugin isn't
+            # connected
+            if not self._server_plugin or \
+                    self._server_plugin.status != CONNECTION_STATUS_CONNECTED:
+                        plugin.start()
+
+        elif plugin == self._server_plugin:
+            # Server plugin can always try to connect
+            plugin.start()
+
 
     @dbus.service.signal(PRESENCE_INTERFACE, signature="o")
     def ActivityAppeared(self, activity):

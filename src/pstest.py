@@ -110,10 +110,6 @@ class TestOwner(GenericOwner):
         if self._change_timeout == 0:
             self._change_timeout = gobject.timeout_add(10000, self._update_something)
 
-    def set_registered(self, value):
-        if value:
-            self._registered = True
-
     def _load_config(self):
         if not os.path.exists(self._cfg_file):
             return (None, None, False)
