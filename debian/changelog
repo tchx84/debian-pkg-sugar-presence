@@ -1,3 +1,14 @@
+sugar-presence-service (0.79.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * Update local cdbs snippets:
+    + Update copyright-check cdbs snippet to store newline-delimited
+      hints.  Update hints.
+    + Drop wget options broken with recent versions of wget in
+      update-tarball.mk.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 08 Apr 2008 05:02:41 +0200
+
 sugar-presence-service (0.79.0-4) unstable; urgency=low
 
   * Update CDBS tweaks:
