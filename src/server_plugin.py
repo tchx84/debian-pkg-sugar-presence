@@ -32,7 +32,7 @@ from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
 from telepathy.constants import (HANDLE_TYPE_CONTACT, HANDLE_TYPE_GROUP,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
     CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
-    CONNECTION_STATUS_REASON_NAME_IN_USE)
+    CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED)
 import sugar.profile
 
 # Presence Service local modules
@@ -62,21 +62,24 @@ class ServerPlugin(TelepathyPlugin):
 
         self._friends_channel = None
 
-    def _ip4_address_changed_cb(self, ip4am, address):
-        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address)
+    def _ip4_address_changed_cb(self, ip4am, address, iface):
+        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
 
         if address:
             _logger.debug("::: valid IP4 address, conn_status %s" %
                           self._conn_status)
             # this is a no-op if starting would be inappropriate right now
             if self._conn_status != CONNECTION_STATUS_CONNECTED:
-                self.start()
+                self.emit('want-to-connect')
         else:
             _logger.debug("::: invalid IP4 address, will disconnect")
             self._stop()
 
     def _get_account_info(self):
-        """Retrieve connection manager parameters for this account
+        """Retrieve connection manager parameters for this account.
+        We first try to connect without the register flag. If the connection
+        fails because of an authentication error we'll try to register
+        the account.
         """
         server = self._owner.get_server()
         khash = psutils.pubkey_to_keyid(self._owner.props.key)
@@ -85,7 +88,7 @@ class ServerPlugin(TelepathyPlugin):
             'account': "%s@%s" % (khash, server),
             'fallback-conference-server': "conference.%s" % server,
             'password': self._owner.get_key_hash(),
-            'register': not self._owner.get_registered(),
+            'register': False,
             'port': dbus.UInt32(5223),
             'old-ssl': True,
             'ignore-ssl-errors': True,
@@ -234,10 +237,6 @@ class ServerPlugin(TelepathyPlugin):
         return ret
 
     def _connected_cb(self):
-        if not self._owner.get_registered():
-            # we successfully register this account
-            self._owner.set_registered(True)
-
         TelepathyPlugin._connected_cb(self)
 
         # request Friends group channel
@@ -305,20 +304,26 @@ class ServerPlugin(TelepathyPlugin):
 
     def _handle_connection_status_change(self, status, reason):
         """Override TelepathyPlugin implementation to manage connection errors
-        due to registration problem. So, if for any reason the registered flag
-        was not set in the config file but the account was registered, we don't
-        fail to connect (see ticket #2062)."""
+        due to authentication problem. If the connection fails because of an
+        authentication error that's probably because the account isn't
+        registered yet on the server. So we try to register it.
+        If it fails because any other reason we unset the register flag so futur
+        connection attempts won't try to register until we got a new
+        authentication error. This should properly handle the "XO having to use
+        different jabber servers" use case."""
         if status == self._conn_status:
             return
 
-        if (status == CONNECTION_STATUS_DISCONNECTED and
-            reason == CONNECTION_STATUS_REASON_NAME_IN_USE and
-            self._account['register']):
-            _logger.debug('This account is already registered. Connect to it')
-            self._account['register'] = False
-            self._stop()
-            self._init_connection()
-            return
+        if status == CONNECTION_STATUS_DISCONNECTED:
+            if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and \
+                    not self._account['register']:
+                _logger.debug('Authentication failed. Trying to register the account')
+                self._account['register'] = True
+                self._stop()
+                self._init_connection()
+                return
+            else:
+                self._account['register'] = False
 
         TelepathyPlugin._handle_connection_status_change(self, status, reason)
 
@@ -369,14 +374,7 @@ class ServerPlugin(TelepathyPlugin):
         friends_handles = set()
         friends = set()
         for key in keys:
-            try:
-               decoded = base64.b64decode(key)
-            except TypeError:
-                # key is invalid; skip this friend
-                _logger.debug('skipping friend with invalid key')
-                continue
-
-            id = psutils.pubkey_to_keyid(decoded)
+            id = psutils.pubkey_to_keyid(key)
             # this assumes that all our friends are on the same server as us
             jid = '%s@%s' % (id, profile.jabber_server)
             friends.add(jid)

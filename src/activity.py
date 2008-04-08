@@ -793,14 +793,15 @@ class Activity(ExportedGObject):
             self._join_cb()
             _logger.debug("%s of activity %r succeeded", verb, self)
         except Exception, e:
-            self._join_failed_cb(e)
+            self._join_failed_cb(e, 'Activity._joined_cb')
 
         self._join_cb = None
         self._join_err_cb = None
 
-    def _join_failed_cb(self, e):
+    def _join_failed_cb(self, e, location='unknown'):
         verb = self._join_is_sharing and 'Share' or 'Join'
-        _logger.debug("%s of activity %r failed: %s", verb, self, e)
+        _logger.debug("%s of activity %r failed: %s in %s",
+                      verb, self, e, location)
         throw_into_callback(self._join_err_cb, e)
 
         self._join_cb = None
@@ -830,7 +831,8 @@ class Activity(ExportedGObject):
         if props_to_set:
             self._text_channel[PROPERTIES_INTERFACE].SetProperties(
                 props_to_set, reply_handler=self._joined_cb,
-                error_handler=self._join_failed_cb)
+                error_handler=lambda e: self._join_failed_cb(e, 
+                    'Activity._join_activity_channel_props_listed_cb'))
         else:
             self._joined_cb()
 
@@ -869,13 +871,15 @@ class Activity(ExportedGObject):
                 _logger.debug('%r: I am local pending - entering room', self)
                 group.AddMembers([self_ident[0]], '',
                     reply_handler=lambda: None,
-                    error_handler=self._join_failed_cb)
+                    error_handler=lambda e: self._join_failed_cb(e,
+                        'got_all_members AddMembers'))
             elif self._self_handle in local_pending:
                 _logger.debug('%r: I am local pending with channel-specific '
                               'handle - entering room', self)
                 group.AddMembers([self._self_handle], '',
                     reply_handler=lambda: None,
-                    error_handler=self._join_failed_cb)
+                    error_handler=lambda e: self._join_failed_cb(e,
+                        'got_all_members AddMembers cs handle'))
             elif self._self_handle in members:
                 _logger.debug('%r: I am already in the room', self)
                 assert self._joined  # set by _text_channel_members_changed_cb
@@ -890,7 +894,8 @@ class Activity(ExportedGObject):
             # bootstrap by getting the current state. This is where we find
             # out whether anyone was lying to us in their PEP info
             group.GetAllMembers(reply_handler=got_all_members,
-                                error_handler=self._join_failed_cb)
+                                error_handler=lambda e: \
+                                    self._join_failed_cb(e, 'got_group_flags'))
 
         def got_self_handle(self_handle):
             self._self_handle = self_handle
@@ -900,10 +905,14 @@ class Activity(ExportedGObject):
             self._text_channel_matches.append(m)
 
             group.GetGroupFlags(reply_handler=got_group_flags,
-                                error_handler=self._join_failed_cb)
+                                error_handler=lambda e: \
+                                    self._join_failed_cb(e,
+                                        'got_self_handle GetGroupFlags'))
 
         group.GetSelfHandle(reply_handler=got_self_handle,
-                            error_handler=self._join_failed_cb)
+                            error_handler=lambda e: \
+                                self._join_failed_cb(e,
+                                    'GetSelfHandle'))
 
 
     def _join_activity_create_channel_cb(self, text_chan_path):
@@ -913,7 +922,8 @@ class Activity(ExportedGObject):
             reply_handler=lambda tubes_chan_path: \
                 self._join_activity_create_tubes_cb(
                     text_chan_path, tubes_chan_path),
-            error_handler=self._join_failed_cb)
+            error_handler=lambda e: self._join_failed_cb(e,
+                'Activity._join_activity_create_channel_cb'))
 
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
@@ -924,7 +934,8 @@ class Activity(ExportedGObject):
         conn[CONN_INTERFACE].RequestChannel(CHANNEL_TYPE_TEXT,
             HANDLE_TYPE_ROOM, self._room, True,
             reply_handler=self._join_activity_create_channel_cb,
-            error_handler=self._join_failed_cb)
+            error_handler=lambda e: self._join_failed_cb(e,
+                'Activity._join_activity_got_handles_cb'))
 
     def join(self, async_cb, async_err_cb, sharing, private=None,
              sender=None):
@@ -978,7 +989,8 @@ class Activity(ExportedGObject):
             conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
                 [self._tp.suggest_room_for_activity(self._id)],
                 reply_handler=self._join_activity_got_handles_cb,
-                error_handler=self._join_failed_cb)
+                error_handler=lambda e: self._join_failed_cb(e,
+                    'Activity.join RequestHandles'))
         else:
             _logger.warning("Raising RuntimeError: Don't know room for %r",
                             self)
@@ -1132,7 +1144,8 @@ class Activity(ExportedGObject):
             else:
                 self._text_channel[PROPERTIES_INTERFACE].ListProperties(
                     reply_handler=self._join_activity_channel_props_listed_cb,
-                    error_handler=self._join_failed_cb)
+                    error_handler=lambda e: self._join_failed_cb(e,
+                        'Activity._text_channel_members_changed_cb'))
 
     def _text_channel_closed_cb(self):
         """Callback method called when the text channel is closed.
