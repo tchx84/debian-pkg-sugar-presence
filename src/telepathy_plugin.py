@@ -179,6 +179,7 @@ class TelepathyPlugin(gobject.GObject):
         """Attempt to reconnect to the server after the back-off time has
         elapsed.
         """
+        _logger.debug("%r: reconnect timed out. Let's try to connect", self)
         if self._backoff_id > 0:
             gobject.source_remove(self._backoff_id)
             self._backoff_id = 0
@@ -209,9 +210,13 @@ class TelepathyPlugin(gobject.GObject):
         if there is an existing connection, reuse it by
         registering for various of events on it.
         """
+        _logger.debug('%r: init connection', self)
         conn = self._find_existing_connection()
         if not conn:
+            _logger.debug('%r: no existing connection. Create a new one', self)
             conn = self._make_new_connection()
+        else:
+            _logger.debug('%r: found existing connection. Reuse it', self)
 
         m = conn[CONN_INTERFACE].connect_to_signal('StatusChanged',
            self._handle_connection_status_change)
