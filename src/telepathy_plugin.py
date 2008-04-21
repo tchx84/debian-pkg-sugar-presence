@@ -193,6 +193,8 @@ class TelepathyPlugin(gobject.GObject):
         if self._backoff_id != 0:
             gobject.source_remove(self._backoff_id)
 
+        _logger.debug("%r: restart reconnect time out (%u seconds)",
+                self, self._reconnect_timeout / 1000)
         self._backoff_id = gobject.timeout_add(self._reconnect_timeout,
                 self._reconnect_cb)
 
@@ -291,14 +293,14 @@ class TelepathyPlugin(gobject.GObject):
             _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
+                _logger.debug("%r: authentification failed. Give up ", self)
                 pass
             else:
                 # Try again later. We'll detect whether we have a network
                 # connection after the retry period elapses. The fact that
                 # this timer is running also serves as a marker to indicate
                 # that we shouldn't try to go back online yet.
-                if self._backoff_id:
-                    self._reset_reconnect_timer()
+                self._reset_reconnect_timer()
 
         self.emit('status', self._conn_status, int(reason))
 
