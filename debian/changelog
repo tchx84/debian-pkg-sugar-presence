@@ -12,7 +12,7 @@ sugar-presence-service (0.79.3-1) unstable; urgency=low
   * Semi-auto-update debian/control to update build-dependencies:
       DEB_AUTO_UPDATE_DEBIAN_CONTROL=yes fakeroot debian/rules clean
 
- -- Jonas Smedegaard <dr@jones.dk>  Thu, 24 Apr 2008 09:49:44 +0200
+ -- Jonas Smedegaard <dr@jones.dk>  Thu, 24 Apr 2008 11:50:22 +0200
 
 sugar-presence-service (0.79.2-1) unstable; urgency=low
 
