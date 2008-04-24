@@ -2,7 +2,7 @@ This is sugar presence service packaged for Debian GNU systems.
 
 Upstream source: http://dev.laptop.org/pub/sugar/sources/sugar-presence-service/
 
-Upstream Git source: git://dev.laptop.org
+Upstream Git source: git://dev.laptop.org/projects/presence-service
 
 Upstream author: Red Hat, Inc.
 

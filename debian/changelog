@@ -8,6 +8,7 @@ sugar-presence-service (0.79.3-1) unstable; urgency=low
     + Relax python-central and python-support build-dependencies in
       python-autotools.mk.
     + Strip any non-printable characters in copyright-check.mk.
+  * Mention exact upstream Git source in debian/copyright.
   * Semi-auto-update debian/control to update build-dependencies:
       DEB_AUTO_UPDATE_DEBIAN_CONTROL=yes fakeroot debian/rules clean
 
