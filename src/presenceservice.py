@@ -568,10 +568,10 @@ class PresenceService(ExportedGObject):
             self.ActivityInvitation(activity.object_path(),
                                     buddy.object_path(), message)
 
-    def _private_invitation(self, tp, chan_path):
+    def _private_invitation(self, tp, chan_path, chan_type):
         conn = tp.get_connection()
         self.PrivateInvitation(str(conn.service_name), conn.object_path,
-                               chan_path)
+                               chan_path, chan_type)
 
     def _want_to_connect(self, plugin):
         if plugin == self._ll_plugin:
@@ -606,8 +606,8 @@ class PresenceService(ExportedGObject):
     def ActivityInvitation(self, activity, buddy, message):
         pass
 
-    @dbus.service.signal(PRESENCE_INTERFACE, signature="soo")
-    def PrivateInvitation(self, bus_name, connection, channel):
+    @dbus.service.signal(PRESENCE_INTERFACE, signature="soos")
+    def PrivateInvitation(self, bus_name, connection, channel, chan_type):
         pass
 
     @dbus.service.method(PRESENCE_INTERFACE, in_signature='',

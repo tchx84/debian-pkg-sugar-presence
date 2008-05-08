@@ -74,7 +74,7 @@ class TelepathyPlugin(gobject.GObject):
             # We were invited to join a chat or a media call
             # args:
             #   channel object path
-            (gobject.SIGNAL_RUN_FIRST, None, [object]),
+            (gobject.SIGNAL_RUN_FIRST, None, [object, str]),
         'want-to-connect':
             # The TelepathyPlugin wants to connect. presenceservice.py will
             # call the start() method if that's OK with its policy.
@@ -477,7 +477,7 @@ class TelepathyPlugin(gobject.GObject):
         elif (handle_type == HANDLE_TYPE_CONTACT and
               channel_type in (CHANNEL_TYPE_TEXT,
                                CHANNEL_TYPE_STREAMED_MEDIA)):
-            self.emit("private-invitation", object_path)
+            self.emit("private-invitation", object_path, channel_type)
 
         elif (handle_type == HANDLE_TYPE_LIST and
               channel_type == CHANNEL_TYPE_CONTACT_LIST):
