@@ -583,6 +583,28 @@ class Activity(ExportedGObject):
         return self.get_channels()
 
     @dbus.service.method(_ACTIVITY_INTERFACE,
+                        in_signature="", out_signature="soa(osuu)")
+    def ListChannels(self):
+        """D-Bus method to get the list of channels associated with this
+        activity.
+
+        :Returns:
+            - the D-Bus well-known service name of the connection
+              (FIXME: this is redundant; in Telepathy it can be derived
+              from that of the connection)
+            - the D-Bus object path of the connection
+            - a list of tuples containing for each channel associated
+              with this activity:
+                - a D-Bus object path for the channel object
+                - a D-Bus interface name representing the channel type
+                - an integer representing the handle type this channel
+                  communicates with, or zero
+                - an integer handle representing the contact, room or
+                  list this channel communicates with, or zero
+        """
+        return self.list_channels()
+
+    @dbus.service.method(_ACTIVITY_INTERFACE,
                          in_signature='a{sv}', out_signature='')
     def SetProperties(self, new_props):
         """D-Bus method to update the activity's properties.
@@ -1015,6 +1037,20 @@ class Activity(ExportedGObject):
             channels.append(self._text_channel.object_path)
         if self._tubes_channel is not None:
             channels.append(self._tubes_channel.object_path)
+        return (str(conn.service_name), conn.object_path, channels)
+
+    def list_channels(self):
+        conn = self._tp.get_connection()
+        # XXX add other channels as necessary
+        channels = []
+        if self._text_channel is not None:
+            channels.append((self._text_channel.object_path,
+                CHANNEL_TYPE_TEXT, HANDLE_TYPE_ROOM, self._room))
+
+        if self._tubes_channel is not None:
+            channels.append((self._tubes_channel.object_path,
+                CHANNEL_TYPE_TUBES, HANDLE_TYPE_ROOM, self._room))
+
         return (str(conn.service_name), conn.object_path, channels)
 
     def leave(self, async_cb, async_err_cb):
