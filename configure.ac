@@ -1,4 +1,4 @@
-AC_INIT([Sugar Presence Service],[0.79.1],[],[sugar-presence-service])
+AC_INIT([Sugar Presence Service],[0.81.1],[],[sugar-presence-service])
 
 AC_PREREQ([2.59])
 
