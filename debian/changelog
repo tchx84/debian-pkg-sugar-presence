@@ -1,3 +1,10 @@
+sugar-presence-service (0.81.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Reorganize debian/copyright to only mention each license once.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Mon, 09 Jun 2008 12:43:04 +0200
+
 sugar-presence-service (0.79.3-2) unstable; urgency=low
 
   * Have python-gobject build-dependency fallback to python-gtk2 older
