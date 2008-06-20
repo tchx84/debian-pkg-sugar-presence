@@ -1,3 +1,9 @@
+sugar-presence-service (0.81.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Sat, 21 Jun 2008 01:27:39 +0200
+
 sugar-presence-service (0.81.1-1) unstable; urgency=low
 
   * New upstream release.
