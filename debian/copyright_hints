@@ -20,6 +20,6 @@ GPL GENERATED FILE [1996-1997, 1999-2000, 2002-2005]: missing
 GPL GENERATED FILE [2000-2001, 2003-2005 Free Software Foundation, Inc]: py-compile
 GPL-2+ [2006, Red Hat, Inc]: src/main.py
 GPL-2+ [2008, Red Hat, Inc]: src/sugar-presence-service.in
-MIT/X11 (BSD like) [and license / notice and this permission notice shall be included in / 1994 X Consortium]: install-sh
+MIT/X11 (BSD like) [1994 X Consortium]: install-sh
 UNKNOWN [1989, 1991 Free Software Foundation, Inc. / the software, and]: COPYING
 UNKNOWN [2002-2003, 2005 Free Software Foundation, Inc / 1996-2004 / 2001, 2003, 2005 Free Software Foundation, Inc]: aclocal.m4
