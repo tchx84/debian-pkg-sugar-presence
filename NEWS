@@ -1,3 +1,13 @@
+sugar-presence-service 0.81.3 (2008-07-08)
+==========================================
+
+The "Change the Channel" release.
+
+Enhancements:
+
+* dev.laptop.org #4757: Add ListChannels from Telepathy
+
+
 sugar-presence-service 0.81.2 (2008-06-20)
 ==========================================
 
