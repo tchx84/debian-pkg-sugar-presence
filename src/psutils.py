@@ -284,7 +284,7 @@ class IP4AddressMonitor(gobject.GObject):
         import commands
         (s, o) = commands.getstatusoutput("/sbin/route -n")
         if s != 0:
-            return
+            return None, None
         for line in o.split('\n'):
             fields = line.split(" ")
             if fields[0] == "0.0.0.0":
