@@ -1,3 +1,13 @@
+sugar-presence-service 0.81.4 (2008-07-22)
+==========================================
+
+The "Oooops I'm late" release.
+
+Fixes:
+
+* dev.laptop.org #7451: Presence Service should start even with no interfaces up
+
+
 sugar-presence-service 0.81.3 (2008-07-08)
 ==========================================
 
