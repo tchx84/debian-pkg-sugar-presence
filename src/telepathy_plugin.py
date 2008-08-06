@@ -35,6 +35,7 @@ from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CONN_INTERFACE_PRESENCE, CONN_INTERFACE_AVATARS,
         CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
         CONN_MGR_INTERFACE)
+from telepathy.errors import (InvalidArgument, InvalidHandle)
 
 import psutils
 
@@ -363,7 +364,7 @@ class TelepathyPlugin(gobject.GObject):
             try:
                 jid = self._conn[CONN_INTERFACE].InspectHandles(handle_type,
                      [handle])
-            except DBusException:
+            except (InvalidArgument, InspectHandles):
                 continue
             else:
                 jids.append(jid[0])
@@ -392,7 +393,7 @@ class TelepathyPlugin(gobject.GObject):
         try:
             jids = self._conn[CONN_INTERFACE].InspectHandles(
                     HANDLE_TYPE_CONTACT, relevant)
-        except DBusException:
+        except (InvalidArgument, InspectHandles):
             # InspectHandles failed so discard invalid handles by trying to
             # inspect them one by one.
             # FIXME: the Inspectotron should offer a proper way to do this.
