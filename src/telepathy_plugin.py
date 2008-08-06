@@ -396,7 +396,7 @@ class TelepathyPlugin(gobject.GObject):
         except (InvalidArgument, InspectHandles):
             # InspectHandles failed so discard invalid handles by trying to
             # inspect them one by one.
-            # FIXME: the Inspectotron should offer a proper way to do this.
+            # FIXME: the Contacts interface should offer a proper way to do this.
             jids = self._inspect_handles_one_by_one(HANDLE_TYPE_CONTACT, relevant)
             if not jids:
                 return
