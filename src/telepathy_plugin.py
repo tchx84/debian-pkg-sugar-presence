@@ -356,6 +356,20 @@ class TelepathyPlugin(gobject.GObject):
         _logger.debug('%r: Contacts now offline: %r', self, handles)
         self.emit("contacts-offline", handles)
 
+    def _inspect_handles_one_by_one(self, handle_type, handles):
+        jids = []
+
+        for handle in handles:
+            try:
+                jid = self._conn[CONN_INTERFACE].InspectHandles(handle_type,
+                     [handle])
+            except DBusException:
+                continue
+            else:
+                jids.append(jid[0])
+
+        return jids
+
     def _contacts_online(self, handles):
         """Handle contacts coming online"""
         relevant = []
@@ -375,8 +389,16 @@ class TelepathyPlugin(gobject.GObject):
         if not relevant:
             return
 
-        jids = self._conn[CONN_INTERFACE].InspectHandles(
-                HANDLE_TYPE_CONTACT, relevant)
+        try:
+            jids = self._conn[CONN_INTERFACE].InspectHandles(
+                    HANDLE_TYPE_CONTACT, relevant)
+        except DBusException:
+            # InspectHandles failed so discard invalid handles by trying to
+            # inspect them one by one.
+            # FIXME: the Inspectotron should offer a proper way to do this.
+            jids = self._inspect_handles_one_by_one(HANDLE_TYPE_CONTACT, relevant)
+            if not jids:
+                return
 
         handle_to_objid = self.identify_contacts(None, relevant, jids)
         objids = []
