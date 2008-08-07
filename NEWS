@@ -1,3 +1,13 @@
+sugar-presence-service 0.82.1 (2008-08-07)
+==========================================
+
+The "One more bug fixed" release.
+
+Fixes:
+
+* dev.laptop.org #5618: PS should drop handles causing InspectHandles failing
+
+
 sugar-presence-service 0.82.0 (2008-08-06)
 ==========================================
 
