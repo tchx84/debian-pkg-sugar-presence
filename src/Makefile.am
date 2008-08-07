@@ -20,7 +20,8 @@ psdata_PYTHON = \
 	pstest.py \
 	psutils.py \
 	server_plugin.py \
-	telepathy_plugin.py
+	telepathy_plugin.py \
+	config.py
 
 bin_SCRIPTS = sugar-presence-service
 

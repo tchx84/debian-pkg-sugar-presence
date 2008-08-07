@@ -11,6 +11,7 @@ AM_PATH_PYTHON
 
 AC_CONFIG_FILES([
     src/sugar-presence-service
+    src/config.py
 ])
 
 AC_CONFIG_FILES([
