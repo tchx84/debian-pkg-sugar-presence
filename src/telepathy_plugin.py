@@ -364,7 +364,7 @@ class TelepathyPlugin(gobject.GObject):
             try:
                 jid = self._conn[CONN_INTERFACE].InspectHandles(handle_type,
                      [handle])
-            except (InvalidArgument, InspectHandles):
+            except (InvalidArgument, InvalidHandle):
                 continue
             else:
                 jids.append(jid[0])
@@ -393,7 +393,7 @@ class TelepathyPlugin(gobject.GObject):
         try:
             jids = self._conn[CONN_INTERFACE].InspectHandles(
                     HANDLE_TYPE_CONTACT, relevant)
-        except (InvalidArgument, InspectHandles):
+        except (InvalidArgument, InvalidHandle):
             # InspectHandles failed so discard invalid handles by trying to
             # inspect them one by one.
             # FIXME: the Contacts interface should offer a proper way to do this.
