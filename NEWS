@@ -1,3 +1,31 @@
+sugar-presence-service 0.82.0 (2008-08-06)
+==========================================
+
+The "Woo I'm stable!" release.
+
+No code change since 0.81.4, the point of this release is to sync
+version number with Sucrose 0.82.0.
+
+sugar-presence-service 0.81.4 (2008-07-22)
+==========================================
+
+The "Oooops I'm late" release.
+
+Fixes:
+
+* dev.laptop.org #7451: Presence Service should start even with no interfaces up
+
+
+sugar-presence-service 0.81.3 (2008-07-08)
+==========================================
+
+The "Change the Channel" release.
+
+Enhancements:
+
+* dev.laptop.org #4757: Add ListChannels from Telepathy
+
+
 sugar-presence-service 0.81.2 (2008-06-20)
 ==========================================
 
@@ -13,5 +41,5 @@ sugar-presence-service 0.81.1 (2008-05-21)
 
 The "I'm full of Glucose" release.
 
-- No code change since 0.79.3, the point of this release is to sync
+No code change since 0.79.3, the point of this release is to sync
 version number with Sucrose.
