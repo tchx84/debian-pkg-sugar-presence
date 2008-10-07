@@ -1,6 +1,6 @@
 sugar-presence-service (0.82.0-2) UNRELEASED; urgency=low
 
-  * Build-depend on ${misc:Depends}.
+  * Depend on ${misc:Depends}.
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 07 Oct 2008 11:47:49 +0200
 
