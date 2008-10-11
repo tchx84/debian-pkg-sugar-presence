@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import gconf
 import os
 import logging
 try:
@@ -951,13 +952,15 @@ class ShellOwner(GenericOwner):
 
         calls GenericOwner.__init__
         """
+        client = gconf.client_get_default()    
         profile = get_profile()
 
-        server = profile.jabber_server
+        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
         key_hash = profile.privkey_hash
         key = profile.pubkey
-        nick = profile.nick_name
-        color = profile.color.to_string()
+
+        nick = client.get_string("/desktop/sugar/user/nick")
+        color = client.get_string("/desktop/sugar/user/color")
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
         f = open(icon_file, "r")

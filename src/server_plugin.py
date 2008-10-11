@@ -22,6 +22,7 @@ import logging
 import os
 from itertools import izip
 from string import hexdigits
+import gconf
 
 # Other libraries
 import dbus
@@ -33,7 +34,6 @@ from telepathy.constants import (HANDLE_TYPE_CONTACT, HANDLE_TYPE_GROUP,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
     CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
     CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED)
-import sugar.profile
 
 # Presence Service local modules
 import psutils
@@ -368,15 +368,15 @@ class ServerPlugin(TelepathyPlugin):
             # not ready yet
             return
 
-        config_path = os.path.join(sugar.env.get_profile_path(), 'config')
-        profile = sugar.profile.Profile(config_path)
+        client = gconf.client_get_default()        
+        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
 
         friends_handles = set()
         friends = set()
         for key in keys:
             id = psutils.pubkey_to_keyid(key)
             # this assumes that all our friends are on the same server as us
-            jid = '%s@%s' % (id, profile.jabber_server)
+            jid = '%s@%s' % (id, server)
             friends.add(jid)
 
         def error_syncing_friends(e):
