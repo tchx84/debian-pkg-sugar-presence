@@ -35,6 +35,7 @@ from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CONN_INTERFACE_PRESENCE, CONN_INTERFACE_AVATARS,
         CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
         CONN_MGR_INTERFACE)
+from telepathy.errors import (InvalidArgument, InvalidHandle)
 
 import psutils
 
@@ -356,6 +357,20 @@ class TelepathyPlugin(gobject.GObject):
         _logger.debug('%r: Contacts now offline: %r', self, handles)
         self.emit("contacts-offline", handles)
 
+    def _inspect_handles_one_by_one(self, handle_type, handles):
+        jids = []
+
+        for handle in handles:
+            try:
+                jid = self._conn[CONN_INTERFACE].InspectHandles(handle_type,
+                     [handle])
+            except (InvalidArgument, InvalidHandle):
+                continue
+            else:
+                jids.append(jid[0])
+
+        return jids
+
     def _contacts_online(self, handles):
         """Handle contacts coming online"""
         relevant = []
@@ -375,8 +390,16 @@ class TelepathyPlugin(gobject.GObject):
         if not relevant:
             return
 
-        jids = self._conn[CONN_INTERFACE].InspectHandles(
-                HANDLE_TYPE_CONTACT, relevant)
+        try:
+            jids = self._conn[CONN_INTERFACE].InspectHandles(
+                    HANDLE_TYPE_CONTACT, relevant)
+        except (InvalidArgument, InvalidHandle):
+            # InspectHandles failed so discard invalid handles by trying to
+            # inspect them one by one.
+            # FIXME: the Contacts interface should offer a proper way to do this.
+            jids = self._inspect_handles_one_by_one(HANDLE_TYPE_CONTACT, relevant)
+            if not jids:
+                return
 
         handle_to_objid = self.identify_contacts(None, relevant, jids)
         objids = []

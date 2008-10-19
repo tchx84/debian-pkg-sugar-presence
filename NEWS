@@ -1,3 +1,20 @@
+sugar-presence-service 0.82.2 (2008-08-08)
+==========================================
+
+The "I should use pyflakes more often" release.
+
+This brown paper bag release fixes a stupid name error in #5618 fixe.
+
+sugar-presence-service 0.82.1 (2008-08-07)
+==========================================
+
+The "One more bug fixed" release.
+
+Fixes:
+
+* dev.laptop.org #5618: PS should drop handles causing InspectHandles failing
+
+
 sugar-presence-service 0.82.0 (2008-08-06)
 ==========================================
 
