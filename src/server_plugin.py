@@ -44,6 +44,7 @@ from telepathy_plugin import TelepathyPlugin
 
 _logger = logging.getLogger('s-p-s.server_plugin')
 
+_MUC_JID_RE = re.compile('.*@.*/.*')
 
 class ServerPlugin(TelepathyPlugin):
     """Telepathy-python-based presence server interface
@@ -417,9 +418,8 @@ class ServerPlugin(TelepathyPlugin):
         # This is horribly protocol specific but should, hopefully, do the
         # job.
         jid = self._conn.InspectHandles(1, [handle])[0]
-        reg = re.compile('.*@.*/.*')
 
-        if reg.match(jid) is None:
+        if _MUC_JID_RE.match(jid) is None:
             _logger.debug('%s (%d) is not channel specific' % (jid, handle))
             return False
         else:
