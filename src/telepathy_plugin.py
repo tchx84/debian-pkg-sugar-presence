@@ -371,6 +371,9 @@ class TelepathyPlugin(gobject.GObject):
 
         return jids
 
+    def _handle_is_channel_specific(self, handle):
+        raise NotImplementedError
+
     def _contacts_online(self, handles):
         """Handle contacts coming online"""
         relevant = []
@@ -382,7 +385,8 @@ class TelepathyPlugin(gobject.GObject):
                 pass
             elif (handle in self._subscribe_members or
                   handle in self._subscribe_local_pending or
-                  handle in self._subscribe_remote_pending):
+                  handle in self._subscribe_remote_pending or
+                  not self._handle_is_channel_specific(handle)):
                 relevant.append(handle)
             # else it's probably a channel-specific handle - can't create a
             # Buddy object for those yet

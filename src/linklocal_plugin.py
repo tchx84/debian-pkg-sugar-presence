@@ -222,3 +222,7 @@ class LinkLocalPlugin(TelepathyPlugin):
             # Salut can't connect during the next 2 minutes
             self._have_to_wait_id = gobject.timeout_add(120000,
                     self._have_to_wait_cb)
+
+    def _handle_is_channel_specific(self, handle):
+        # Salut doesn't have channel specific handles
+        return False

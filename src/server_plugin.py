@@ -22,6 +22,7 @@ import logging
 import os
 from itertools import izip
 from string import hexdigits
+import re
 import gconf
 
 # Other libraries
@@ -407,3 +408,20 @@ class ServerPlugin(TelepathyPlugin):
             HANDLE_TYPE_CONTACT, friends,
             reply_handler=got_friends_handles,
             error_handler=error_syncing_friends)
+
+    def _handle_is_channel_specific(self, handle):
+        # FIXME: This is crack. Really. Please kids, dont't do this at home.
+        # As we don't have a proper TP API to test if a handle is channel
+        # specific or not we use this cracky heuristic:
+        # "Is the jid contain a '/' after the '@'?".
+        # This is horribly protocol specific but should, hopefully, do the
+        # job.
+        jid = self._conn.InspectHandles(1, [handle])[0]
+        reg = re.compile('.*@.*/.*')
+
+        if reg.match(jid) is None:
+            _logger.debug('%s (%d) is not channel specific' % (jid, handle))
+            return False
+        else:
+            _logger.debug('%s (%d) is channel specific' % (jid, handle))
+            return True
