@@ -25,12 +25,11 @@ import dbus.service
 import gobject
 from dbus.gobject_service import ExportedGObject
 from dbus.mainloop.glib import DBusGMainLoop
-from telepathy.client import ManagerRegistry, Connection
-from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
-    CONN_INTERFACE_AVATARS, CONN_INTERFACE_ALIASING)
-from telepathy.constants import (CONNECTION_STATUS_CONNECTING,
-    CONNECTION_STATUS_CONNECTED,
-    CONNECTION_STATUS_DISCONNECTED)
+from telepathy.client import ManagerRegistry
+from telepathy.interfaces import (CONN_INTERFACE_AVATARS,
+                                  CONN_INTERFACE_ALIASING)
+from telepathy.constants import (CONNECTION_STATUS_CONNECTED,
+                                 CONNECTION_STATUS_DISCONNECTED)
 
 from sugar import util
 
@@ -142,7 +141,7 @@ class PresenceService(ExportedGObject):
     def owner(self):
         return self._owner
 
-    def _connection_disconnected_cb(self, foo=None):
+    def _connection_disconnected_cb(self, data=None):
         """Log event when D-Bus kicks us off the bus for some reason"""
         _logger.debug("Disconnected from session bus!!!")
 
@@ -158,7 +157,8 @@ class PresenceService(ExportedGObject):
                 self._ll_plugin.cleanup()
         else:
             self._tp_disconnected(plugin)
-            if plugin == self._server_plugin and self._ll_plugin and status == CONNECTION_STATUS_DISCONNECTED:
+            if plugin == self._server_plugin and self._ll_plugin and \
+               status == CONNECTION_STATUS_DISCONNECTED:
                 # For now, Gabble takes precedence over Salut to alleviate
                 # corner cases where laptops on mesh can't talk to ones on APs
                 if self._ll_plugin.status == CONNECTION_STATUS_DISCONNECTED:
@@ -578,8 +578,8 @@ class PresenceService(ExportedGObject):
             # Link-local plugin can connect only if the Server plugin isn't
             # connected
             if not self._server_plugin or \
-                    self._server_plugin.status != CONNECTION_STATUS_CONNECTED:
-                        plugin.start()
+               self._server_plugin.status != CONNECTION_STATUS_CONNECTED:
+                plugin.start()
 
         elif plugin == self._server_plugin:
             # Server plugin can always try to connect
@@ -684,7 +684,7 @@ class PresenceService(ExportedGObject):
                 and conn.object_path == tp_conn_path):
                 buddy = handles.get(handle)
                 if buddy is not None and buddy.props.valid:
-                        return buddy.object_path()
+                    return buddy.object_path()
                 # either the handle is invalid, or we don't have a Buddy
                 # object for that buddy because we don't have all their
                 # details yet

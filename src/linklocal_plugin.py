@@ -19,17 +19,13 @@
 # Standard library
 import logging
 from itertools import izip
-from string import hexdigits
 
 # Other libraries
 import gobject
 from dbus import SystemBus
-from telepathy.client import (ConnectionManager, Connection)
-from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
-    CHANNEL_INTERFACE_GROUP)
-from telepathy.constants import (HANDLE_TYPE_CONTACT,
-    CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
-    CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES)
+from telepathy.client import Connection
+from telepathy.interfaces import CONN_INTERFACE
+from telepathy.constants import HANDLE_TYPE_CONTACT
 
 # Presence Service local modules
 import psutils

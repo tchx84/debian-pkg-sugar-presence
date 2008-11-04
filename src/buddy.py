@@ -974,7 +974,8 @@ class ShellOwner(GenericOwner):
         for (signal, cb) in (('IconChanged', self._icon_changed_cb),
                              ('ColorChanged', self._color_changed_cb),
                              ('NickChanged', self._nick_changed_cb),
-                             ('CurrentActivityChanged', self._cur_activity_changed_cb)):
+                             ('CurrentActivityChanged',
+                              self._cur_activity_changed_cb)):
             self._bus.add_signal_receiver(cb, signal_name=signal,
                 dbus_interface=self._SHELL_OWNER_INTERFACE,
                 bus_name=self._SHELL_SERVICE,

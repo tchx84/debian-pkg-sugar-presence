@@ -32,8 +32,7 @@ from telepathy.constants import (CONNECTION_STATUS_DISCONNECTED,
     HANDLE_TYPE_CONTACT, HANDLE_TYPE_ROOM, HANDLE_TYPE_LIST)
 from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CHANNEL_TYPE_STREAMED_MEDIA, CHANNEL_INTERFACE_GROUP,
-        CONN_INTERFACE_PRESENCE, CONN_INTERFACE_AVATARS,
-        CONN_INTERFACE_ALIASING, CHANNEL_TYPE_CONTACT_LIST,
+        CONN_INTERFACE_PRESENCE, CHANNEL_TYPE_CONTACT_LIST,
         CONN_MGR_INTERFACE)
 from telepathy.errors import (InvalidArgument, InvalidHandle)
 
@@ -295,7 +294,6 @@ class TelepathyPlugin(gobject.GObject):
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
                 _logger.debug("%r: authentification failed. Give up ", self)
-                pass
             else:
                 # Try again later. We'll detect whether we have a network
                 # connection after the retry period elapses. The fact that
@@ -400,8 +398,9 @@ class TelepathyPlugin(gobject.GObject):
         except (InvalidArgument, InvalidHandle):
             # InspectHandles failed so discard invalid handles by trying to
             # inspect them one by one.
-            # FIXME: the Contacts interface should offer a proper way to do this.
-            jids = self._inspect_handles_one_by_one(HANDLE_TYPE_CONTACT, relevant)
+            # FIXME: the Contacts interface should offer a proper way to do this
+            jids = self._inspect_handles_one_by_one(HANDLE_TYPE_CONTACT,
+                                                    relevant)
             if not jids:
                 return
 
