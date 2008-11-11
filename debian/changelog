@@ -5,6 +5,8 @@ sugar-presence-service (0.82.2-1) UNRELEASED; urgency=low
   * Update cdbs snippets:
     + Run dh_py* scripts before dh_installinit in python-autotools.mk
       (see bug#494288)
+    + Cleanup check stamp dir for flavored builds in makefile.mk, fixing
+      failure to build twice in a row.
     + Compact simple licenses too (those without ' or later') in
       copyright-check.mk
     + Various improvements to update-tarball.mk (none important here)
