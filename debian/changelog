@@ -2,6 +2,12 @@ sugar-presence-service (0.82.2-1) UNRELEASED; urgency=low
 
   * New upstream release.
   * Depend on ${misc:Depends}.
+  * Update cdbs snippets:
+    + Run dh_py* scripts before dh_installinit in python-autotools.mk
+      (see bug#494288)
+    + Compact simple licenses too (those without ' or later') in
+      copyright-check.mk
+    + Various improvements to update-tarball.mk (none important here)
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 11 Nov 2008 11:05:33 +0100
 
