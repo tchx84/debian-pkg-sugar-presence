@@ -857,6 +857,18 @@ class PresenceService(ExportedGObject):
         if self._server_plugin is not None:
             self._server_plugin.sync_friends(keys)
 
+    @dbus.service.method(PRESENCE_INTERFACE, in_signature="",
+            out_signature="")
+    def RestartServerConnection(self):
+        """Stop and restart the server_plugin.
+        
+        This allows changing jabber servers without restarting Sugar.
+        """
+        if self._server_plugin:
+            if self._server_plugin.status == CONNECTION_STATUS_CONNECTED:
+                self._server_plugin.cleanup()
+                self._server_plugin.start()
+
 def main(test_num=0, randomize=False):
     loop = gobject.MainLoop()
     DBusGMainLoop(set_as_default=True)

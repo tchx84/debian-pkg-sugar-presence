@@ -655,7 +655,6 @@ class GenericOwner(Buddy):
         calls Buddy.__init__
         """
         self._ps = ps
-        self._server = kwargs.pop("server", None)
         self._key_hash = kwargs.pop("key_hash", None)
 
         #: Telepathy plugin -> dict { activity ID -> room handle }
@@ -910,7 +909,9 @@ class GenericOwner(Buddy):
 
     def get_server(self):
         """Retrieve XMPP server hostname (used by the server plugin)"""
-        return self._server
+        client = gconf.client_get_default()    
+        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
+        return server
 
     def get_key_hash(self):
         """Retrieve the user's private-key hash (used by the server plugin
@@ -951,7 +952,6 @@ class ShellOwner(GenericOwner):
         client = gconf.client_get_default()    
         profile = get_profile()
 
-        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
         key_hash = profile.privkey_hash
         key = profile.pubkey
 
@@ -965,8 +965,7 @@ class ShellOwner(GenericOwner):
 
         GenericOwner.__init__(self, ps, bus,
                 'keyid/' + psutils.pubkey_to_keyid(key),
-                key=key, nick=nick, color=color, icon=icon, server=server,
-                key_hash=key_hash)
+                key=key, nick=nick, color=color, icon=icon, key_hash=key_hash)
 
         # Ask to get notifications on Owner object property changes in the
         # shell. If it's not currently running, no problem - we'll get the

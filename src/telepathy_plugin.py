@@ -591,6 +591,8 @@ class TelepathyPlugin(gobject.GObject):
 
         # Only init connection if we have a valid IP address
         if self._could_connect():
+            # Reread account info in case the server changed
+            self._account = self._get_account_info()
             self._init_connection()
         else:
             _logger.debug('%r: Postponing connection', self)
