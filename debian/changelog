@@ -1,3 +1,16 @@
+sugar-presence-service (0.82.2-2) UNRELEASED; urgency=low
+
+  * Add README.source (and drop CDBS hints and README.packaging).
+  * Update CDBS snippets:
+    + Minor updates to buildinfo.mk and copyright-check.mk
+    + Enhance package-relations.mk to support all binary package
+      relations (except -indep ones)
+    + Extend package-relation.mk to handle debhelper 6 and 7.0.1
+  * Add git-buildpackage configfile, enabling signed tags and use of
+    pristine-tar.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 29 May 2009 16:04:59 +0200
+
 sugar-presence-service (0.82.2-1) unstable; urgency=low
 
   * New upstream release.
