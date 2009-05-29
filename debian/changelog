@@ -1,3 +1,9 @@
+sugar-presence-service-0.84 (0.84.0-2) unstable; urgency=low
+
+  * Provide, conflict with and replace sugar-presence-service.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 29 May 2009 20:30:06 +0200
+
 sugar-presence-service-0.84 (0.84.0-1) unstable; urgency=low
 
   * New upstream release.
