@@ -7,15 +7,18 @@ Source: http://download.sugarlabs.org/sources/sucrose/glucose/sugar-presence-ser
 	git://git.sugarlabs.org/sugar-presence-service/mainline
 
 Copyright: 2007, Red Hat, Inc.
-	2007, Collabora Ltd.
+	2007, Collabora Ltd. <http://www.collabora.co.uk/>
 License: GPL-2+
 
-Files: src/sugar-presence-service.in
-Copyright: 2008, Red Hat, Inc.
+Files: src/sugar-presence-service.in,
+	src/main.py
+Copyright: 2006,2008, Red Hat, Inc.
 License: GPL-2+
 
-Files: src/main.py
-Copyright: 2006, Red Hat, Inc.
+Files: src/psutils.py
+Copyright: 2007, Red Hat, Inc
+	2007, Collabora Ltd. <http://www.collabora.co.uk/>
+	2008, One Laptop Per Child
 License: GPL-2+
 
 Files: install-sh
