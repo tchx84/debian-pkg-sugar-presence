@@ -12,6 +12,10 @@ sugar-presence-service-0.84 (0.82.2-2) UNRELEASED; urgency=low
   * Restrict watch file to current stable release (0.84).
   * Handle binary (not only source) dependencies in rules file.
   * Append major version (0.84) to binary and source package.
+  * Update debian/copyright:
+    + Rewrite to use DEP5 r48 proposed machine-readable format
+    + Add/update authors of files below debian/* (no new licenses)
+  * Bump policy compliance to Standards-Version 3.8.1.
 
  -- Jonas Smedegaard <dr@jones.dk>  Fri, 29 May 2009 16:04:59 +0200
 

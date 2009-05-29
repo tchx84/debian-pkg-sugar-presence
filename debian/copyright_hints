@@ -1,6 +1,22 @@
 Format-Specification: http://wiki.debian.org/Proposals/CopyrightFormat?action=recall&rev=XXX
 Upstream-Name: Untrusted draft - double-check copyrights yourself!
 
+Files: Makefile.am
+	NEWS
+	configure.ac
+	debian/README.source
+	debian/compat
+	debian/control
+	debian/control.in
+	debian/gbp.conf
+	debian/pycompat
+	debian/watch
+	src/Makefile.am
+	src/__init__.py
+	src/test_psutils.py
+Copyright: *No copyright*
+License: UNKNOWN
+
 Files: src/activity.py
 	src/buddy.py
 	src/buddyiconcache.py
@@ -11,14 +27,19 @@ Copyright: 2007, Collabora Ltd
 	2007, Red Hat, Inc
 License: GPL-2+
 
-Files: Makefile.am
-	NEWS
-	configure.ac
-	src/Makefile.am
-	src/__init__.py
-	src/test_psutils.py
-Copyright: *No copyright*
-License: UNKNOWN
+Files: debian/cdbs/1/class/autotools-vars.mk
+	debian/cdbs/1/class/autotools.mk
+	debian/cdbs/1/class/makefile-vars.mk
+	debian/cdbs/1/class/makefile.mk
+Copyright: 2002-2003, Colin Walters <walters@debian.org>
+	2008, Jonas Smedegaard <dr@jones.dk>
+License: GPL
+
+Files: debian/cdbs/1/class/python-autotools.mk
+	debian/cdbs/1/class/python-vars.mk
+	debian/cdbs/1/rules/package-relations.mk
+Copyright: 2008, Jonas Smedegaard <dr@jones.dk>
+License: GPL
 
 Files: src/presenceservice.py
 	src/pstest.py
@@ -39,6 +60,22 @@ License: GPL (GENERATED FILE)
 Files: py-compile
 Copyright: 2000-2001, 2003-2005, Free Software Foundation, Inc
 License: GPL (GENERATED FILE)
+
+Files: debian/cdbs/1/rules/buildinfo.mk
+Copyright: 2004-2007, Jonas Smedegaard <dr@jones.dk>
+License: GPL
+
+Files: debian/cdbs/1/rules/upstream-tarball.mk
+Copyright: 2007-2008, Jonas Smedegaard <dr@jones.dk>
+License: GPL
+
+Files: debian/rules
+Copyright: 2008-2009, Jonas Smedegaard <dr@jones.dk>
+License: GPL
+
+Files: debian/cdbs/1/rules/copyright-check.mk
+Copyright: \s*(\S.*?)\s*\
+License: GPL
 
 Files: src/main.py
 Copyright: 2006, Red Hat, Inc
