@@ -17,32 +17,30 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 # Standard library
-import base64
 import logging
-import os
 from itertools import izip
-from string import hexdigits
+import re
+import gconf
 
 # Other libraries
 import dbus
-import gobject
-from telepathy.client import (ConnectionManager, Connection, Channel)
-from telepathy.interfaces import (CONN_MGR_INTERFACE, CONN_INTERFACE,
-    CHANNEL_INTERFACE_GROUP, CHANNEL_TYPE_CONTACT_LIST)
+from telepathy.client import (Connection, Channel)
+from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_INTERFACE_GROUP,
+    CHANNEL_TYPE_CONTACT_LIST)
 from telepathy.constants import (HANDLE_TYPE_CONTACT, HANDLE_TYPE_GROUP,
     CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED,
     CHANNEL_GROUP_FLAG_CHANNEL_SPECIFIC_HANDLES,
     CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED)
-import sugar.profile
 
 # Presence Service local modules
 import psutils
 from telepathy_plugin import TelepathyPlugin
 
 
-
 _logger = logging.getLogger('s-p-s.server_plugin')
 
+_MUC_JID_RE = re.compile('.*@.*/.*')
+hexdigits = '0123456789abcdefABCDEF'
 
 class ServerPlugin(TelepathyPlugin):
     """Telepathy-python-based presence server interface
@@ -274,7 +272,7 @@ class ServerPlugin(TelepathyPlugin):
             HANDLE_TYPE_CONTACT, handles)
 
         for handle, jid in izip(handles, identifiers):
-            user, host = jid.split('@', 1)
+            host = jid.split('@', 1)[1]
             if self._server_is_trusted(host):
                 result.append(handle)
 
@@ -317,7 +315,8 @@ class ServerPlugin(TelepathyPlugin):
         if status == CONNECTION_STATUS_DISCONNECTED:
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and \
                     not self._account['register']:
-                _logger.debug('Authentication failed. Trying to register the account')
+                _logger.debug(
+                    'Authentication failed. Trying to register the account')
                 self._account['register'] = True
                 self._stop()
                 self._init_connection()
@@ -368,15 +367,15 @@ class ServerPlugin(TelepathyPlugin):
             # not ready yet
             return
 
-        config_path = os.path.join(sugar.env.get_profile_path(), 'config')
-        profile = sugar.profile.Profile(config_path)
+        client = gconf.client_get_default()        
+        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
 
         friends_handles = set()
         friends = set()
         for key in keys:
-            id = psutils.pubkey_to_keyid(key)
+            identity = psutils.pubkey_to_keyid(key)
             # this assumes that all our friends are on the same server as us
-            jid = '%s@%s' % (id, profile.jabber_server)
+            jid = '%s@%s' % (identity, server)
             friends.add(jid)
 
         def error_syncing_friends(e):
@@ -407,3 +406,19 @@ class ServerPlugin(TelepathyPlugin):
             HANDLE_TYPE_CONTACT, friends,
             reply_handler=got_friends_handles,
             error_handler=error_syncing_friends)
+
+    def _handle_is_channel_specific(self, handle):
+        # FIXME: This is crack. Really. Please kids, dont't do this at home.
+        # As we don't have a proper TP API to test if a handle is channel
+        # specific or not we use this cracky heuristic:
+        # "Is the jid contain a '/' after the '@'?".
+        # This is horribly protocol specific but should, hopefully, do the
+        # job.
+        jid = self._conn.InspectHandles(1, [handle])[0]
+
+        if _MUC_JID_RE.match(jid) is None:
+            _logger.debug('%s (%d) is not channel specific' % (jid, handle))
+            return False
+        else:
+            _logger.debug('%s (%d) is channel specific' % (jid, handle))
+            return True

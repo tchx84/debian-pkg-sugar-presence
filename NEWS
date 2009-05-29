@@ -1,19 +1,20 @@
-sugar-presence-service 0.82.2 (2008-08-08)
+sugar-presence-service 0.83.1 (2008-10-29)
 ==========================================
 
-The "I should use pyflakes more often" release.
+Enhancements:
 
-This brown paper bag release fixes a stupid name error in #5618 fixe.
-
-sugar-presence-service 0.82.1 (2008-08-07)
-==========================================
-
-The "One more bug fixed" release.
+* dev.laptop.org #7581: Don't ignore buddies without keys. This improve
+  interoperability with non Sugar client.
+* dev.laptop.org #7849: Display PS version in the log.
+* Use gconf to get Sugar profile settings.
+* dev.laptop.org #8444: Don't rely on the roster to check if a contact handle
+is channel specific or not. So PS will properly create Buddy objects discovered
+using Gadget. Furthermore, this workaround has the nice side effect to improve
+compatibility with bugged shared roster (as the one of ejabberd).
 
 Fixes:
 
-* dev.laptop.org #5618: PS should drop handles causing InspectHandles failing
-
+* dev.laptop.org #5618; Discard invalid handles if InspectHandles failed.
 
 sugar-presence-service 0.82.0 (2008-08-06)
 ==========================================

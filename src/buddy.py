@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+import gconf
 import os
 import logging
 try:
@@ -569,10 +570,6 @@ class Buddy(ExportedGObject):
         # If the properties didn't contain the key or color, then we're never
         # going to get one.
 
-        # Buddy need a key to be valid
-        if self._key is None:
-            return
-
         try:
             self._awaiting.remove('properties')
         except KeyError:
@@ -658,7 +655,6 @@ class GenericOwner(Buddy):
         calls Buddy.__init__
         """
         self._ps = ps
-        self._server = kwargs.pop("server", None)
         self._key_hash = kwargs.pop("key_hash", None)
 
         #: Telepathy plugin -> dict { activity ID -> room handle }
@@ -913,7 +909,9 @@ class GenericOwner(Buddy):
 
     def get_server(self):
         """Retrieve XMPP server hostname (used by the server plugin)"""
-        return self._server
+        client = gconf.client_get_default()    
+        server = client.get_string("/desktop/sugar/collaboration/jabber_server")
+        return server
 
     def get_key_hash(self):
         """Retrieve the user's private-key hash (used by the server plugin
@@ -951,13 +949,14 @@ class ShellOwner(GenericOwner):
 
         calls GenericOwner.__init__
         """
+        client = gconf.client_get_default()    
         profile = get_profile()
 
-        server = profile.jabber_server
         key_hash = profile.privkey_hash
         key = profile.pubkey
-        nick = profile.nick_name
-        color = profile.color.to_string()
+
+        nick = client.get_string("/desktop/sugar/user/nick")
+        color = client.get_string("/desktop/sugar/user/color")
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
         f = open(icon_file, "r")
@@ -966,8 +965,7 @@ class ShellOwner(GenericOwner):
 
         GenericOwner.__init__(self, ps, bus,
                 'keyid/' + psutils.pubkey_to_keyid(key),
-                key=key, nick=nick, color=color, icon=icon, server=server,
-                key_hash=key_hash)
+                key=key, nick=nick, color=color, icon=icon, key_hash=key_hash)
 
         # Ask to get notifications on Owner object property changes in the
         # shell. If it's not currently running, no problem - we'll get the
@@ -975,7 +973,8 @@ class ShellOwner(GenericOwner):
         for (signal, cb) in (('IconChanged', self._icon_changed_cb),
                              ('ColorChanged', self._color_changed_cb),
                              ('NickChanged', self._nick_changed_cb),
-                             ('CurrentActivityChanged', self._cur_activity_changed_cb)):
+                             ('CurrentActivityChanged',
+                              self._cur_activity_changed_cb)):
             self._bus.add_signal_receiver(cb, signal_name=signal,
                 dbus_interface=self._SHELL_OWNER_INTERFACE,
                 bus_name=self._SHELL_SERVICE,
