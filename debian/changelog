@@ -1,4 +1,4 @@
-sugar-presence-service-0.84 (0.84.0-1) UNRELEASED; urgency=low
+sugar-presence-service-0.84 (0.84.0-1) unstable; urgency=low
 
   * New upstream release.
   * Add README.source (and drop CDBS hints and README.packaging).
@@ -16,9 +16,13 @@ sugar-presence-service-0.84 (0.84.0-1) UNRELEASED; urgency=low
   * Update debian/copyright:
     + Rewrite to use DEP5 r48 proposed machine-readable format
     + Add/update authors of files below debian/* (no new licenses)
+    + Merge copyright entries with only differing years.
   * Bump policy compliance to Standards-Version 3.8.1.
+  * Stop depending on unneeded telepathy-stream-engine.  Closes:
+    bug#526891, thanks to Sjoerd Simons.
+  * Recommend recent network-manager.
 
- -- Jonas Smedegaard <dr@jones.dk>  Fri, 29 May 2009 16:04:59 +0200
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 29 May 2009 19:55:16 +0200
 
 sugar-presence-service (0.82.2-1) unstable; urgency=low
 
