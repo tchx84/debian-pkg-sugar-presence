@@ -14,7 +14,9 @@ Package: sugar-presence-service-0.84
 Architecture: all
 Depends: ${shlibs:Depends}, ${python:Depends}, ${cdbs:Depends}, ${misc:Depends}
 Recommends: ${cdbs:Recommends}
-Provides: ${python:Provides}
+Provides: ${python:Provides}, ${cdbs:Provides}
+Conflicts: ${cdbs:Conflicts}
+Replaces: ${cdbs:Replaces}
 XB-Python-Version: ${python:Versions}
 Description: Sugar graphical shell - presence service
  Sugar is a graphical user interface aimed at children.
