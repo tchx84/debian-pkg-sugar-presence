@@ -24,6 +24,7 @@ import os
 from sugar import logger
 from sugar import env
 
+from config import VERSION
 
 _logger = logging.getLogger('s-p-s')
 
@@ -58,6 +59,6 @@ def main():
 
 	import presenceservice
 
-	_logger.info('Starting presence service...')
+	_logger.info('Starting presence service %s...' % VERSION)
 
 	presenceservice.main(test_num, randomize)

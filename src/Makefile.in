@@ -38,13 +38,13 @@ POST_UNINSTALL = :
 subdir = src
 DIST_COMMON = $(dist_check_SCRIPTS) $(psdata_PYTHON) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/sugar-presence-service.in
+	$(srcdir)/config.py.in $(srcdir)/sugar-presence-service.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_CLEAN_FILES = sugar-presence-service
+CONFIG_CLEAN_FILES = sugar-presence-service config.py
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(psdatadir)" \
 	"$(DESTDIR)$(servicedir)"
 binSCRIPT_INSTALL = $(INSTALL_SCRIPT)
@@ -145,7 +145,8 @@ psdata_PYTHON = \
 	pstest.py \
 	psutils.py \
 	server_plugin.py \
-	telepathy_plugin.py
+	telepathy_plugin.py \
+	config.py
 
 bin_SCRIPTS = sugar-presence-service
 DISTCLEANFILES = $(service_DATA)
@@ -188,6 +189,8 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 sugar-presence-service: $(top_builddir)/config.status $(srcdir)/sugar-presence-service.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+config.py: $(top_builddir)/config.status $(srcdir)/config.py.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)

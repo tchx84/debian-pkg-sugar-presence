@@ -1,4 +1,4 @@
-AC_INIT([Sugar Presence Service],[0.82.2],[],[sugar-presence-service])
+AC_INIT([Sugar Presence Service],[0.84.0],[],[sugar-presence-service])
 
 AC_PREREQ([2.59])
 
@@ -11,6 +11,7 @@ AM_PATH_PYTHON
 
 AC_CONFIG_FILES([
     src/sugar-presence-service
+    src/config.py
 ])
 
 AC_CONFIG_FILES([
