@@ -47,8 +47,11 @@ DEB_MAKE_CHECK_TARGET = check
 CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dbus, python-gobject | python-gtk2 (<< 2.9)
 
 # Needed (always/often) at runtime
-CDBS_DEPENDS = python-gobject, python-dbus (>= 0.82.0), python-telepathy, python-sugar-toolkit-$(pkgbranch), openssh-client, telepathy-gabble, telepathy-salut, telepathy-stream-engine
-CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon
+#  * Network-manager 0.6 seems handled as if no network-manager
+CDBS_DEPENDS = python-sugar-toolkit-$(pkgbranch)
+CDBS_DEPENDS += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
+CDBS_DEPENDS += , openssh-client, telepathy-gabble, telepathy-salut
+CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
 
 # Resolve, cleanup and apply CDBS-declared dependencies
 include debian/cdbs/1/rules/package-relations.mk
