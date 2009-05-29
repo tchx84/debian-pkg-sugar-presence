@@ -1,5 +1,6 @@
-sugar-presence-service-0.84 (0.82.2-2) UNRELEASED; urgency=low
+sugar-presence-service-0.84 (0.84.0-1) UNRELEASED; urgency=low
 
+  * New upstream release.
   * Add README.source (and drop CDBS hints and README.packaging).
   * Update CDBS snippets:
     + Minor updates to buildinfo.mk and copyright-check.mk
