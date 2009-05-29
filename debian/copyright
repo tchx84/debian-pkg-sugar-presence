@@ -1,31 +1,47 @@
-This is sugar presence service packaged for Debian GNU systems.
+Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=48
+Name: sugar-presence-service
+Maintainer: Sugarlabs <sugar-devel@lists.sugarlabs.org>
+	http://lists.sugarlabs.org/listinfo/sugar-devel
+	irc://irc.freenode.net/sugar
+Source: http://download.sugarlabs.org/sources/sucrose/glucose/sugar-presence-service/
+	git://git.sugarlabs.org/sugar-presence-service/mainline
 
-Upstream source: http://download.sugarlabs.org/sources/sucrose/glucose/sugar-presence-service/
-
-Upstream Git source: git://git.sugarlabs.org/sugar-presence-service/mainline
-
-Upstream author: Red Hat, Inc.
-
-Files: debian/*
-Copyright: © 2008 Jonas Smedegaard <dr@jones.dk>
-License: GPL-2+
-
-Files: *
-Copyright: © 2007, Red Hat, Inc.
-	   © 2007, Collabora Ltd.
+Copyright: 2007, Red Hat, Inc.
+	2007, Collabora Ltd.
 License: GPL-2+
 
 Files: src/sugar-presence-service.in
-Copyright: © 2008, Red Hat, Inc.
+Copyright: 2008, Red Hat, Inc.
 License: GPL-2+
 
 Files: src/main.py
-Copyright: © 2006, Red Hat, Inc.
+Copyright: 2006, Red Hat, Inc.
 License: GPL-2+
 
 Files: install-sh
-Copyright: © 1994 X Consortium
-License: other
+Copyright: 1994, X Consortium
+License: other-MIT
+
+Files: debian/*
+Copyright: 2004-2009, Jonas Smedegaard <dr@jones.dk>
+License: GPL-2+
+
+Files: debian/cdbs/1/class/autotools*
+	debian/cdbs/1/class/makefile*
+Copyright: 2002-2003, Colin Walters <walters@debian.org>
+	2008, Jonas Smedegaard <dr@jones.dk>
+License: GPL-2+
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ On Debian GNU systems, the complete text of GNU General Public License
+ (GPL) version 2 can be found at "/usr/share/common-licenses/GPL-2".
+
+License: other-MIT
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to
   deal in the Software without restriction, including without limitation the
@@ -49,14 +65,3 @@ License: other
   tium.
  .
   FSF changes to this file are in the public domain.
-
-License: GPL-2+
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
-On Debian systems, the complete text of the GNU General Public License
-can be found in file "/usr/share/common-licenses/GPL", and the complete
-text of the GNU Lesser General Public License can be found in file
-"/usr/share/common-licenses/LGPL"..
