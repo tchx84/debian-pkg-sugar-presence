@@ -53,5 +53,10 @@ CDBS_DEPENDS += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
 CDBS_DEPENDS += , openssh-client, telepathy-gabble, telepathy-salut
 CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
 
+# Ensure only one variant is installed at a time (Debian Policy 7.6.2)
+CDBS_PROVIDES = $(pkgbase)
+CDBS_CONFLICTS = $(pkgbase)
+CDBS_REPLACES = $(pkgbase)
+
 # Resolve, cleanup and apply CDBS-declared dependencies
 include debian/cdbs/1/rules/package-relations.mk
