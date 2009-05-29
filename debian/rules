@@ -15,7 +15,9 @@ include debian/cdbs/1/class/python-autotools.mk
 include /usr/share/cdbs/1/rules/debhelper.mk
 include debian/cdbs/1/rules/buildinfo.mk
 
-pkg = sugar-presence-service
+pkgbase = sugar-presence-service
+pkgbranch = 0.84
+pkg = $(pkgbase)-$(pkgbranch)
 
 DEB_UPSTREAM_URL = http://download.sugarlabs.org/sources/sucrose/glucose/$(DEB_UPSTREAM_PACKAGE)
 DEB_UPSTREAM_TARBALL_EXTENSION = tar.bz2
@@ -28,8 +30,8 @@ DEB_MAKE_CHECK_TARGET = check
 CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dbus, python-gobject | python-gtk2 (<< 2.9)
 
 # Needed (always/often) at runtime
-CDBS_DEPENDS = python-gobject, python-dbus (>= 0.82.0), python-telepathy, python-sugar-toolkit, openssh-client, telepathy-gabble, telepathy-salut, telepathy-stream-engine
-CDBS_RECOMMENDS = sugar, avahi-daemon
+CDBS_DEPENDS = python-gobject, python-dbus (>= 0.82.0), python-telepathy, python-sugar-toolkit-$(pkgbranch), openssh-client, telepathy-gabble, telepathy-salut, telepathy-stream-engine
+CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon
 
 # Resolve, cleanup and apply CDBS-declared dependencies
 include debian/cdbs/1/rules/package-relations.mk

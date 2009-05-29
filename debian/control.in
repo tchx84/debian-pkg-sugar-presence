@@ -10,7 +10,7 @@ Vcs-Browser: http://git.debian.org/?p=collab-maint/sugar-presence-service.git;a=
 Homepage: http://wiki.sugarlabs.org/go/Sugar
 XS-Python-Version: all
 
-Package: sugar-presence-service
+Package: sugar-presence-service-0.84
 Architecture: all
 Depends: ${shlibs:Depends}, ${python:Depends}, ${cdbs:Depends}, ${misc:Depends}
 Recommends: ${cdbs:Recommends}
