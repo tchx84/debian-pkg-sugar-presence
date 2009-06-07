@@ -43,14 +43,15 @@ DEB_UPSTREAM_TARBALL_MD5 = bf292605b6c2d0ef3761a957acc8a95e
 DEB_MAKE_CHECK_TARGET = check
 
 # Needed by upstream unittests
+#  openssh-client contains ssh-keygen
 #  pygtk << 2.9 contained gobject
-CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dbus, python-gobject | python-gtk2 (<< 2.9)
+CDBS_BUILD_DEPENDS := $(CDBS_BUILD_DEPENDS), python-dbus, python-gobject | python-gtk2 (<< 2.9), openssh-client
 
 # Needed (always/often) at runtime
 #  * Network-manager 0.6 seems handled as if no network-manager
 CDBS_DEPENDS = python-sugar-toolkit-$(pkgbranch)
 CDBS_DEPENDS += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
-CDBS_DEPENDS += , openssh-client, telepathy-gabble, telepathy-salut
+CDBS_DEPENDS += , telepathy-gabble, telepathy-salut
 CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
