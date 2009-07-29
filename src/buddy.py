@@ -54,6 +54,7 @@ _PROP_COLOR = "color"
 _PROP_OWNER = "owner"
 _PROP_VALID = "valid"
 _PROP_OBJID = 'objid'
+_PROP_TAGS = 'tags'
 
 # Will go away soon
 _PROP_IP4_ADDRESS = "ip4-address"
@@ -165,7 +166,10 @@ class Buddy(ExportedGObject):
         _PROP_OBJID        : (str, None, None, None, gobject.PARAM_READABLE),
         _PROP_IP4_ADDRESS  : (str, None, None, None,
                               gobject.PARAM_CONSTRUCT_ONLY |
-                              gobject.PARAM_READWRITE)
+                              gobject.PARAM_READWRITE),
+        _PROP_TAGS         : (str, None, None, None,
+                              gobject.PARAM_CONSTRUCT_ONLY |
+                              gobject.PARAM_READWRITE),
     }
 
     def __init__(self, bus, object_id, **kwargs):
@@ -198,9 +202,11 @@ class Buddy(ExportedGObject):
         self._nick = None
         self._color = None
         self._ip4_address = None
+        self._tags = None
 
         _ALLOWED_INIT_PROPS = [_PROP_NICK, _PROP_KEY, _PROP_ICON,
-                               _PROP_CURACT, _PROP_COLOR, _PROP_IP4_ADDRESS]
+                               _PROP_CURACT, _PROP_COLOR, _PROP_IP4_ADDRESS,
+                               _PROP_TAGS]
         for (key, value) in kwargs.items():
             if key not in _ALLOWED_INIT_PROPS:
                 _logger.debug("Invalid init property '%s'; ignoring..." % key)
@@ -250,6 +256,8 @@ class Buddy(ExportedGObject):
             return self._owner
         elif pspec.name == _PROP_IP4_ADDRESS:
             return self._ip4_address
+        elif pspec.name == _PROP_TAGS:
+            return self._tags
 
     def do_set_property(self, pspec, value):
         """Set given property
@@ -277,6 +285,8 @@ class Buddy(ExportedGObject):
             self._key = value
         elif pspec.name == _PROP_IP4_ADDRESS:
             self._ip4_address = value
+        elif pspec.name == _PROP_TAGS:
+            self._tags = value
 
     # dbus signals
     @dbus.service.signal(_BUDDY_INTERFACE,
@@ -410,6 +420,7 @@ class Buddy(ExportedGObject):
         props[_PROP_COLOR] = self.props.color or ''
         props[_PROP_IP4_ADDRESS] = self.props.ip4_address or ''
         props[_PROP_CURACT] = self.props.current_activity or ''
+        props[_PROP_TAGS] = self.props.tags or ''
         return props
 
     def get_identifier_by_plugin(self, plugin):
@@ -538,6 +549,12 @@ class Buddy(ExportedGObject):
                     self._key = key
                     changed_props[_PROP_KEY] = key or ''
                     changed = True
+        if _PROP_TAGS in properties:
+            tags = properties[_PROP_TAGS]
+            if tags != self._tags:
+                self._tags = tags
+                changed_props[_PROP_TAGS] = tags or ''
+                changed = True
 
         if not changed or not changed_props:
             return
@@ -768,6 +785,7 @@ class GenericOwner(Buddy):
             'color': self._color or '',
             'key': dbus.ByteArray(self._key or ''),
             'ip4-address': self._ip4_address or '',
+            'tags': self._tags or '',
             }, signature='sv')
 
         # FIXME: clarify whether we're meant to support random extra properties
@@ -898,7 +916,8 @@ class GenericOwner(Buddy):
                 gobject.timeout_add(1000, lambda: self._set_self_alias(tp))
 
             if (changed_props.has_key("color") or
-                changed_props.has_key("ip4-address")):
+                changed_props.has_key("ip4-address") or
+                changed_props.has_key("tags")):
                 if tp.status == CONNECTION_STATUS_CONNECTED:
                     self._set_self_olpc_properties(tp)
 
@@ -957,6 +976,7 @@ class ShellOwner(GenericOwner):
 
         nick = client.get_string("/desktop/sugar/user/nick")
         color = client.get_string("/desktop/sugar/user/color")
+        tags = client.get_string("/desktop/sugar/user/tags")
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
         f = open(icon_file, "r")
@@ -965,7 +985,8 @@ class ShellOwner(GenericOwner):
 
         GenericOwner.__init__(self, ps, bus,
                 'keyid/' + psutils.pubkey_to_keyid(key),
-                key=key, nick=nick, color=color, icon=icon, key_hash=key_hash)
+                key=key, nick=nick, color=color, icon=icon, key_hash=key_hash,
+                tags=tags)
 
         # Ask to get notifications on Owner object property changes in the
         # shell. If it's not currently running, no problem - we'll get the
@@ -973,6 +994,7 @@ class ShellOwner(GenericOwner):
         for (signal, cb) in (('IconChanged', self._icon_changed_cb),
                              ('ColorChanged', self._color_changed_cb),
                              ('NickChanged', self._nick_changed_cb),
+                             ('TagsChanged', self._tags_changed_cb),
                              ('CurrentActivityChanged',
                               self._cur_activity_changed_cb)):
             self._bus.add_signal_receiver(cb, signal_name=signal,
