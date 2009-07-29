@@ -1017,6 +1017,11 @@ class ShellOwner(GenericOwner):
         props = {_PROP_COLOR: color}
         self.set_properties(props)
 
+    def _tags_changed_cb(self, tags):
+        """Handle tags change, set property to generate event"""
+        props = {_PROP_TAGS: tags}
+        self.set_properties(props)
+
     def _nick_changed_cb(self, nick):
         """Handle nickname change, set property to generate event"""
         props = {_PROP_NICK: nick}
