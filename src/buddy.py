@@ -974,9 +974,12 @@ class ShellOwner(GenericOwner):
         key_hash = profile.privkey_hash
         key = profile.pubkey
 
-        nick = client.get_string("/desktop/sugar/user/nick")
         color = client.get_string("/desktop/sugar/user/color")
         tags = client.get_string("/desktop/sugar/user/tags")
+        nick = client.get_string("/desktop/sugar/user/nick")
+
+        if not isinstance(nick, unicode):
+            nick = unicode(nick, 'utf-8')
 
         icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
         f = open(icon_file, "r")
