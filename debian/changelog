@@ -1,3 +1,22 @@
+sugar-presence-service-0.84 (0.84.0-4) UNRELEASED; urgency=low
+
+  * Build-depend on openssh-client (not depend: needed for regression
+    test only).
+  * Depend on net-tools.
+  * Update OLPC relation (now historic) in long description.
+  * Bump up policy compliance to standards version 3.8.3.
+  * Update CDBS snippets:
+    + Enhance package-relations.mk to support all binary package
+      relations (except -indep ones).
+    + Improve package-relation.mk cleanup to cover debhelper 6 and 7,
+      strip more whitespace and cover mixture of unversioned+versioned
+      dependencies.
+    + Silence applying dependencies in package-relation.mk.
+    + Implement fail-source-not-repackaged rule in upstream-tarball.mk.
+    + Update URL to draft DEP5 format in copyright-check.mk output.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 11 Sep 2009 22:57:57 +0200
+
 sugar-presence-service-0.84 (0.84.0-3) unstable; urgency=low
 
   * Really provide, conflict with and replace sugar-presence-service.
