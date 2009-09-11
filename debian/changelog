@@ -1,5 +1,6 @@
-sugar-presence-service-0.84 (0.84.0-4) UNRELEASED; urgency=low
+sugar-presence-service-0.86 (0.85.2-1) unstable; urgency=low
 
+  * New upstream development release.
   * Build-depend on openssh-client (not depend: needed for regression
     test only).
   * Depend on net-tools.
@@ -14,8 +15,12 @@ sugar-presence-service-0.84 (0.84.0-4) UNRELEASED; urgency=low
     + Silence applying dependencies in package-relation.mk.
     + Implement fail-source-not-repackaged rule in upstream-tarball.mk.
     + Update URL to draft DEP5 format in copyright-check.mk output.
+  * Bump binary and source package to major version 0.86.
+  * Relax watch file to track all releases.
+  * Update debian/control format to DEP5 rev54. Include automade files
+    (GPL-2+ or GAP).
 
- -- Jonas Smedegaard <dr@jones.dk>  Fri, 11 Sep 2009 22:57:57 +0200
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 11 Sep 2009 23:45:10 +0200
 
 sugar-presence-service-0.84 (0.84.0-3) unstable; urgency=low
 
