@@ -790,8 +790,8 @@ class GenericOwner(Buddy):
 
         # FIXME: clarify whether we're meant to support random extra properties
         # (Salut doesn't)
-        if tp._PROTOCOL == 'salut':
-            del props['ip4-address']
+        if tp._PROTOCOL == 'local-xmpp':
+            del props['tags']
 
         if connected:
             if CONN_INTERFACE_BUDDY_INFO not in conn:
