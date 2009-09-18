@@ -1120,6 +1120,8 @@ class Activity(ExportedGObject):
             self._buddy_to_handle[buddy] = handle
         self._add_buddies(added_buddies.itervalues())
 
+        self._claimed_buddies |= set(added_buddies.itervalues())
+
         # we treat all pending members as if they weren't there
         removed = set(removed)
         removed |= set(local_pending)
