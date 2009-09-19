@@ -1,3 +1,10 @@
+sugar-presence-service-0.86 (0.85.3-1) unstable; urgency=low
+
+  * New upstream development release.
+  * Update md5sum hint for new upstream v0.85.3 release.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Sat, 19 Sep 2009 22:52:09 +0200
+
 sugar-presence-service-0.86 (0.85.2-1) unstable; urgency=low
 
   * New upstream development release.
