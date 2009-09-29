@@ -1,3 +1,9 @@
+sugar-presence-service-0.86 (0.86.0-0) UNRELEASED; urgency=low
+
+  * New upstream stable release.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 29 Sep 2009 22:26:01 +0200
+
 sugar-presence-service-0.86 (0.85.3-1) unstable; urgency=low
 
   * New upstream development release.
