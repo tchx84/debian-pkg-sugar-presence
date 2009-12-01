@@ -1,3 +1,9 @@
+sugar-presence-service-0.88 (0.86.0-2) UNRELEASED; urgency=low
+
+  * Switch packaging to branch 0.88.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 01 Dec 2009 15:57:45 +0100
+
 sugar-presence-service-0.86 (0.86.0-1) unstable; urgency=low
 
   * New upstream stable release.
