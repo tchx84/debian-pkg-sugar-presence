@@ -22,7 +22,7 @@ from itertools import izip
 
 # Other libraries
 import gobject
-from dbus import SystemBus
+from dbus import DBusException, SystemBus
 from telepathy.client import Connection
 from telepathy.interfaces import CONN_INTERFACE
 from telepathy.constants import HANDLE_TYPE_CONTACT
@@ -53,14 +53,21 @@ class LinkLocalPlugin(TelepathyPlugin):
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
 
-        self._sys_bus = SystemBus()
         self._have_avahi = False
-        self._watch = self._sys_bus.watch_name_owner('org.freedesktop.Avahi',
-                                                     self._avahi_owner_cb)
-
+        self._watch = None
         # Glib source ID indicating we have to wait before be allowed to try
         # to connect
         self._have_to_wait_id = 0
+        self._find_avahi()
+
+    def _find_avahi(self):
+        try:
+            sys_bus = SystemBus()
+            self._watch = sys_bus.watch_name_owner('org.freedesktop.Avahi',
+                self._avahi_owner_cb)
+
+        except DBusException:
+            _logger.exception('Error connecting to Avahi')
 
     def _avahi_owner_cb(self, unique_name):
         had_avahi = self._have_avahi
