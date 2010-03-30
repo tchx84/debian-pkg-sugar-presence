@@ -16,7 +16,7 @@ License: other-GAP-FSF
 
 Files: ./missing
 	./py-compile
-Copyright: 1996-1997,1999-2005, Free Software Foundation, Inc.
+Copyright: 1996-1997,1999-2006, 2008-2009, Free Software Foundation, Inc.
 License: GPL-2+ or other-SA-Autoconf
 
 Files: ./src/sugar-presence-service.in,
