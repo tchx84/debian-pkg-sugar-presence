@@ -159,10 +159,22 @@ class IP4AddressMonitor(gobject.GObject):
         self._matches = []
         self._addr = None
         self._nm_iface = None
-        self._sys_bus = dbus.SystemBus()
-        self._watch = self._sys_bus.watch_name_owner(_NM_SERVICE,
-                                                     self._nm_owner_cb)
-        if not self._sys_bus.name_has_owner(_NM_SERVICE):
+        self._sys_bus = None
+        self._watch = None
+        self._find_network_manager()
+
+    def _find_network_manager(self):
+        found = False
+        try:
+            self._sys_bus = dbus.SystemBus()
+            self._watch = self._sys_bus.watch_name_owner(_NM_SERVICE,
+                self._nm_owner_cb)
+            found = self._sys_bus.name_has_owner(_NM_SERVICE)
+
+        except DBusException:
+            _logger.exception('Error connecting to NetworkManager')
+
+        if not found:
             addr, iface = self._get_address_fallback()
             self._update_address(addr, iface)
 
