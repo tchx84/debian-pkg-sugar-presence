@@ -1,4 +1,4 @@
-AC_INIT([Sugar Presence Service],[0.87.1],[],[sugar-presence-service])
+AC_INIT([Sugar Presence Service],[0.88.0],[],[sugar-presence-service])
 
 AC_PREREQ([2.59])
 
@@ -6,6 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/sugar-presence-service.in])
 
 AM_INIT_AUTOMAKE([1.9 foreign dist-bzip2 no-dist-gzip])
+
+AM_MAINTAINER_MODE
 
 AM_PATH_PYTHON
 
