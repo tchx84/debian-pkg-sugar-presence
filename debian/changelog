@@ -1,3 +1,15 @@
+sugar-presence-service-0.90 (0.88.0-2) UNRELEASED; urgency=low
+
+  * Switch packaging to upstream branch 0.90.
+  * Improve copyright file:
+    + Fix replace license section MIT with Expat and other-X.
+    + Add comment on Expat variation.
+    + Rename and tighten other-GAP-* sections.
+  * Suppress unneeded auto-resolved build-dependency on python-dev.
+  * Bump Policy compliance to standards-version to 3.9.0.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Wed, 21 Jul 2010 12:09:59 +0200
+
 sugar-presence-service-0.88 (0.88.0-1) unstable; urgency=low
 
   * New upstream stable release.
