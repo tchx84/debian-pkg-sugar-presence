@@ -60,46 +60,10 @@ class ServerPlugin(TelepathyPlugin):
 
         self._friends_channel = None
 
-    def _ip4_address_changed_cb(self, ip4am, address, iface):
-        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
-
-        if address:
-            _logger.debug("::: valid IP4 address, conn_status %s" %
-                          self._conn_status)
-            # this is a no-op if starting would be inappropriate right now
-            if self._conn_status != CONNECTION_STATUS_CONNECTED:
-                self.emit('want-to-connect')
-        else:
-            _logger.debug("::: invalid IP4 address, will disconnect")
-            self._stop()
-
-    def _get_account_info(self):
-        """Retrieve connection manager parameters for this account.
-        We first try to connect without the register flag. If the connection
-        fails because of an authentication error we'll try to register
-        the account.
-        """
-        server = self._owner.get_server()
-        khash = psutils.pubkey_to_keyid(self._owner.props.key)
-
-        return {
-            'account': "%s@%s" % (khash, server),
-            'fallback-conference-server': "conference.%s" % server,
-            'password': self._owner.get_key_hash(),
-            'register': False,
-            'port': dbus.UInt32(5223),
-            'old-ssl': True,
-            'ignore-ssl-errors': True,
-            }
-
     def suggest_room_for_activity(self, activity_id):
         """Suggest a room to use to share the given activity.
         """
-        # We shouldn't have to do this, but Gabble sometimes finds the IRC
-        # transport and goes "that has chatrooms, that'll do nicely". Work
-        # around it til Gabble gets better at finding the MUC service.
-        return '%s@%s' % (activity_id,
-                          self._account['fallback-conference-server'])
+        return activity_id
 
     def _find_existing_connection(self):
         """Try to find an existing Telepathy connection to this server
@@ -112,8 +76,6 @@ class ServerPlugin(TelepathyPlugin):
 
         returns connection or None
         """
-        our_name = self._account['account']
-
         # Search existing connections, if any, that we might be able to use
         connections = Connection.get_connections()
         for item in connections:
@@ -121,17 +83,10 @@ class ServerPlugin(TelepathyPlugin):
                 continue
             if item[CONN_INTERFACE].GetProtocol() != self._PROTOCOL:
                 continue
-            if item[CONN_INTERFACE].GetStatus() == CONNECTION_STATUS_CONNECTED:
-                test_handle = item[CONN_INTERFACE].RequestHandles(
-                    HANDLE_TYPE_CONTACT, [our_name])[0]
-                if item[CONN_INTERFACE].GetSelfHandle() != test_handle:
-                    continue
+            if item[CONN_INTERFACE].GetStatus() != CONNECTION_STATUS_CONNECTED:
+                continue
             return item
         return None
-
-    def _could_connect(self):
-        return bool(self._ip4am.props.address and
-                    TelepathyPlugin._could_connect(self))
 
     def _server_is_trusted(self, hostname):
         """Return True if the server with the given hostname is trusted to
@@ -299,32 +254,6 @@ class ServerPlugin(TelepathyPlugin):
             if added:
                 self._subscribe_channel[CHANNEL_INTERFACE_GROUP].AddMembers(
                         added, '')
-
-    def _handle_connection_status_change(self, status, reason):
-        """Override TelepathyPlugin implementation to manage connection errors
-        due to authentication problem. If the connection fails because of an
-        authentication error that's probably because the account isn't
-        registered yet on the server. So we try to register it.
-        If it fails because any other reason we unset the register flag so futur
-        connection attempts won't try to register until we got a new
-        authentication error. This should properly handle the "XO having to use
-        different jabber servers" use case."""
-        if status == self._conn_status:
-            return
-
-        if status == CONNECTION_STATUS_DISCONNECTED:
-            if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED and \
-                    not self._account['register']:
-                _logger.debug(
-                    'Authentication failed. Trying to register the account')
-                self._account['register'] = True
-                self._stop()
-                self._init_connection()
-                return
-            else:
-                self._account['register'] = False
-
-        TelepathyPlugin._handle_connection_status_change(self, status, reason)
 
     def _publish_channel_cb(self, channel):
         TelepathyPlugin._publish_channel_cb(self, channel)
