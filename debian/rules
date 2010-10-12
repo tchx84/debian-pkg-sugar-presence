@@ -46,12 +46,12 @@ CDBS_BUILD_DEPENDS += , python-dbus, python-gobject | python-gtk2 (<< 2.9), open
 
 # Needed (always/often) at runtime
 #  net-tools (route) needed as fallback for NetworkManager 0.7
-CDBS_DEPENDS = python-sugar-toolkit-$(pkgbranch)
-CDBS_DEPENDS += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
-CDBS_DEPENDS += , telepathy-gabble, telepathy-salut, net-tools
-CDBS_RECOMMENDS = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
+CDBS_DEPENDS_DEFAULT = python-sugar-toolkit-$(pkgbranch)
+CDBS_DEPENDS_DEFAULT += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
+CDBS_DEPENDS_DEFAULT += , telepathy-gabble, telepathy-salut, net-tools
+CDBS_RECOMMENDS_DEFAULT = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
-CDBS_PROVIDES = $(pkgbase)
-CDBS_CONFLICTS = $(pkgbase)
-CDBS_REPLACES = $(pkgbase)
+CDBS_PROVIDES_DEFAULT = $(pkgbase)
+CDBS_CONFLICTS_DEFAULT = $(pkgbase)
+CDBS_REPLACES_DEFAULT = $(pkgbase)
