@@ -713,18 +713,7 @@ class GenericOwner(Buddy):
 
         uses SetActivities on BuddyInfo channel
         """
-        conn = tp.get_connection()
-
-        if CONN_INTERFACE_BUDDY_INFO not in conn:
-            _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set activities' % conn.object_path)
-            return
-
-        conn[CONN_INTERFACE_BUDDY_INFO].SetActivities(
-                self._activities_by_connection[tp].iteritems(),
-                reply_handler=_noop,
-                error_handler=lambda e:
-                    _logger.warning("setting activities failed: %s", e))
+        pass
 
     def _set_self_current_activity(self, tp):
         """Forward our current activity (or "") to network
@@ -742,35 +731,9 @@ class GenericOwner(Buddy):
                 cur_activity = ""
                 cur_activity_handle = 0
 
-        _logger.debug("Setting current activity to '%s' (handle %s)",
-                      cur_activity, cur_activity_handle)
-        conn = tp.get_connection()
-
-        if CONN_INTERFACE_BUDDY_INFO not in conn:
-            _logger.warning('%s does not support BuddyInfo - unable to '
-                            'set current activity' % conn.object_path)
-            return
-
-        self.PropertyChanged({_PROP_CURACT: self._current_activity or ''})
-        conn[CONN_INTERFACE_BUDDY_INFO].SetCurrentActivity(cur_activity,
-                cur_activity_handle,
-                reply_handler=_noop,
-                error_handler=lambda e:
-                    _logger.warning("setting current activity failed: %s", e))
-
     def _set_self_alias(self, tp):
-        self_handle = self._handles[tp][0]
-        conn = tp.get_connection()
+        pass
 
-        if CONN_INTERFACE_ALIASING not in conn:
-            _logger.warning('%s does not support aliasing - unable to '
-                            'set my own alias' % conn.object_path)
-            return False
-
-        conn[CONN_INTERFACE_ALIASING].SetAliases({self_handle: self._nick},
-                reply_handler=_noop,
-                error_handler=lambda e:
-                    _logger.warning('Error setting alias: %s', e))
         # Hack so we can use this as a timeout handler
         return False
 
@@ -792,36 +755,6 @@ class GenericOwner(Buddy):
         # (Salut doesn't)
         if tp._PROTOCOL == 'local-xmpp':
             del props['tags']
-
-        if connected:
-            if CONN_INTERFACE_BUDDY_INFO not in conn:
-                _logger.warning('%s does not support BuddyInfo - unable to '
-                                'set my own buddy properties' %
-                                conn.object_path)
-                return False
-
-            conn[CONN_INTERFACE_BUDDY_INFO].SetProperties(props,
-                    reply_handler=_noop,
-                    error_handler=lambda e:
-                        _logger.warning('Error setting OLPC properties: %s', e))
-        else:
-            # we don't yet know whether the connection supports setting buddy
-            # properties
-            # FIXME: remove this hack, and the import of dbus.proxies, when
-            # we have a newer tp-python that makes dbus_object public
-            try:
-                obj = conn.dbus_object
-                if not isinstance(obj, dbus.proxies.ProxyObject):
-                    raise AttributeError
-            except AttributeError:
-                obj = conn._dbus_object
-
-            obj.SetProperties(props, dbus_interface=CONN_INTERFACE_BUDDY_INFO,
-                    reply_handler=lambda:
-                        _logger.debug('Successfully preloaded buddy props'),
-                    error_handler=lambda e:
-                        _logger.debug('Failed to preload buddy properties, '
-                                      'will try again after Connect(): %s', e))
 
         # Hack so we can use this as a timeout handler
         return False
@@ -851,58 +784,6 @@ class GenericOwner(Buddy):
         # FIXME: Avatars have been disabled for Trial-2 due to performance
         # issues in the avatar cache. Revisit this afterwards
         return
-
-        conn = tp.get_connection()
-        icon_data = self._icon
-
-        if CONN_INTERFACE_AVATARS not in conn:
-            _logger.warning('%s does not support Avatars - unable to '
-                            'set my own avatar on this connection' %
-                            conn.object_path)
-            return
-
-        m = new_md5()
-        m.update(icon_data)
-        digest = m.hexdigest()
-
-        self_handle = self._handles[tp][0]
-        token = conn[CONN_INTERFACE_AVATARS].GetAvatarTokens(
-                [self_handle])[0]
-
-        if buddy_icon_cache.check_avatar(conn.object_path, digest,
-                                         token):
-            # avatar is up to date
-            return
-
-        def set_self_avatar_cb(token):
-            buddy_icon_cache.set_avatar(conn.object_path, digest, token)
-
-        types, minw, minh, maxw, maxh, maxsize = \
-                conn[CONN_INTERFACE_AVATARS].GetAvatarRequirements()
-        if not "image/jpeg" in types:
-            _logger.debug("server does not accept JPEG format avatars.")
-            return
-
-        width = 96
-        height = 96
-        size = 8192
-        if maxw > 0 and width > maxw:
-            width = maxw
-        if maxw > 0 and height > maxh:
-            height = maxh
-        if maxsize > 0 and size > maxsize:
-            size = maxsize
-
-        if 1:
-            # FIXME: Avatars have been disabled for Trial-2 due to performance
-            # issues in the avatar cache. Revisit this afterwards
-            pass
-        else:
-            img_data = _get_buddy_icon_at_size(icon_data, width, height, size)
-            conn[CONN_INTERFACE_AVATARS].SetAvatar(img_data, "image/jpeg",
-                    reply_handler=set_self_avatar_cb,
-                    error_handler=lambda e:
-                        _logger.warning('Error setting avatar: %s', e))
 
     def _property_changed(self, changed_props):
         for tp in self._handles.iterkeys():

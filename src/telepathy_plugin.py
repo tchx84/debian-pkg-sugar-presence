@@ -20,7 +20,9 @@
 import logging
 from itertools import izip
 
+import dbus
 from dbus import DBusException, SessionBus
+from dbus import PROPERTIES_IFACE
 import gobject
 
 from telepathy.client import (Channel, Connection)
@@ -33,7 +35,7 @@ from telepathy.constants import (CONNECTION_STATUS_DISCONNECTED,
 from telepathy.interfaces import (CONN_INTERFACE, CHANNEL_TYPE_TEXT,
         CHANNEL_TYPE_STREAMED_MEDIA, CHANNEL_INTERFACE_GROUP,
         CONN_INTERFACE_PRESENCE, CHANNEL_TYPE_CONTACT_LIST,
-        CONN_MGR_INTERFACE)
+        CONN_MGR_INTERFACE, CHANNEL, CONNECTION_INTERFACE_REQUESTS)
 from telepathy.errors import (InvalidArgument, InvalidHandle)
 
 import psutils
@@ -129,9 +131,6 @@ class TelepathyPlugin(gobject.GObject):
         #: length of the next reconnect timeout
         self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT
 
-        #: Parameters for the connection manager
-        self._account = self._get_account_info()
-
         #: The ``subscribe`` channel: a `telepathy.client.Channel` or None
         self._subscribe_channel = None
         #: The members of the ``subscribe`` channel
@@ -144,14 +143,8 @@ class TelepathyPlugin(gobject.GObject):
         #: The ``publish`` channel: a `telepathy.client.Channel` or None
         self._publish_channel = None
 
-        #: Watch the connection on DBus session bus
         self._session_bus = SessionBus()
-        self._watch_conn_name = None
-
-         # Monitor IPv4 address as an indicator of the network connection
-        self._ip4am = psutils.IP4AddressMonitor.get_instance()
-        self._ip4am_sigid = self._ip4am.connect('address-changed',
-                self._ip4_address_changed_cb)
+        self._init_connection()
 
     @property
     def status(self):
@@ -162,11 +155,6 @@ class TelepathyPlugin(gobject.GObject):
         """Retrieve our telepathy.client.Connection object"""
         return self._conn
 
-    def _get_account_info(self):
-        """Retrieve connection manager parameters for this account
-        """
-        raise NotImplementedError
-
     def suggest_room_for_activity(self, activity_id):
         """Suggest a room to use to share the given activity.
         """
@@ -174,32 +162,6 @@ class TelepathyPlugin(gobject.GObject):
 
     def identify_contacts(self, tp_chan, handles, identifiers=None):
         raise NotImplementedError
-
-    def _reconnect_cb(self):
-        """Attempt to reconnect to the server after the back-off time has
-        elapsed.
-        """
-        _logger.debug("%r: reconnect timed out. Let's try to connect", self)
-        if self._backoff_id > 0:
-            gobject.source_remove(self._backoff_id)
-            self._backoff_id = 0
-
-        # this is a no-op unless _could_connect() returns True
-        self.start()
-
-        return False
-
-    def _reset_reconnect_timer(self):
-        if self._backoff_id != 0:
-            gobject.source_remove(self._backoff_id)
-
-        _logger.debug("%r: restart reconnect time out (%u seconds)",
-                self, self._reconnect_timeout / 1000)
-        self._backoff_id = gobject.timeout_add(self._reconnect_timeout,
-                self._reconnect_cb)
-
-        if self._reconnect_timeout < self._RECONNECT_MAX_TIMEOUT:
-            self._reconnect_timeout *= 2
 
     def _init_connection(self):
         """Set up our connection
@@ -215,10 +177,8 @@ class TelepathyPlugin(gobject.GObject):
         _logger.debug('%r: init connection', self)
         conn = self._find_existing_connection()
         if not conn:
-            _logger.debug('%r: no existing connection. Create a new one', self)
-            conn = self._make_new_connection()
-        else:
-            _logger.debug('%r: found existing connection. Reuse it', self)
+            _logger.debug('%r: no existing connection', self)
+            return
 
         m = conn[CONN_INTERFACE].connect_to_signal('StatusChanged',
            self._handle_connection_status_change)
@@ -230,38 +190,12 @@ class TelepathyPlugin(gobject.GObject):
             conn.service_name, self._watch_conn_name_cb)
 
         self._conn = conn
-        status = self._conn[CONN_INTERFACE].GetStatus()
 
-        self._owner.set_properties_before_connect(self)
-
-        if status == CONNECTION_STATUS_DISCONNECTED:
-            def connect_reply():
-                _logger.debug('%r: Connect() succeeded', self)
-            def connect_error(e):
-                _logger.debug('%r: Connect() failed: %s', self, e)
-                # we don't allow ourselves to retry more often than this
-                self._reset_reconnect_timer()
-                self._conn = None
-
-            self._conn[CONN_INTERFACE].Connect(reply_handler=connect_reply,
-                                               error_handler=connect_error)
-
-        self._handle_connection_status_change(status,
-                CONNECTION_STATUS_REASON_NONE_SPECIFIED)
+        status = self._conn.GetStatus()
+        self._handle_connection_status_change(status, CONNECTION_STATUS_REASON_NONE_SPECIFIED)
 
     def _find_existing_connection(self):
         raise NotImplementedError
-
-    def _make_new_connection(self):
-        acct = self._account.copy()
-
-        # Create a new connection
-        mgr = self._registry.GetManager(self._TP_CONN_MANAGER)
-        name, path = mgr[CONN_MGR_INTERFACE].RequestConnection(
-            self._PROTOCOL, acct)
-        conn = Connection(name, path)
-        del acct
-        return conn
 
     def _watch_conn_name_cb(self, dbus_name):
         """Check if we still have a connection on the DBus session bus.
@@ -289,17 +223,10 @@ class TelepathyPlugin(gobject.GObject):
             self._connected_cb()
         elif status == CONNECTION_STATUS_DISCONNECTED:
             self._conn = None
-            self._stop()
             _logger.debug("%r: disconnected (reason %r)", self, reason)
             if reason == CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED:
                 # FIXME: handle connection failure; retry later?
                 _logger.debug("%r: authentification failed. Give up ", self)
-            else:
-                # Try again later. We'll detect whether we have a network
-                # connection after the retry period elapses. The fact that
-                # this timer is running also serves as a marker to indicate
-                # that we shouldn't try to go back online yet.
-                self._reset_reconnect_timer()
 
         self.emit('status', self._conn_status, int(reason))
 
@@ -307,47 +234,6 @@ class TelepathyPlugin(gobject.GObject):
         # Don't allow connection unless the reconnect timeout has elapsed,
         # or this is the first attempt
         return (self._backoff_id == 0)
-
-    def _stop(self):
-        """If we still have a connection, disconnect it"""
-
-        matches = self._matches
-        self._matches = []
-        for match in matches:
-            match.remove()
-        if self._watch_conn_name is not None:
-            self._watch_conn_name.cancel()
-        self._watch_conn_name = None
-
-        if self._conn:
-            try:
-                self._conn[CONN_INTERFACE].Disconnect()
-            except DBusException, e:
-                _logger.debug('%s Disconnect(): %s', self._conn.object_path, e)
-
-        self._conn_status = CONNECTION_STATUS_DISCONNECTED
-        self.emit('status', self._conn_status, 0)
-
-        if self._online_contacts:
-            # Copy contacts when passing them to self._contacts_offline to
-            # ensure it's pass by _value_, otherwise (since it's a set) it's
-            # passed by reference and odd things happen when it gets subtracted
-            # from itself
-            self._contacts_offline(self._online_contacts.copy())
-
-        # Erase connection as the last thing done, because some of the 
-        # above calls depend on self._conn being valid
-        self._conn = None
-
-    def cleanup(self):
-        self._stop()
-
-        if self._backoff_id > 0:
-            gobject.source_remove(self._backoff_id)
-            self._backoff_id = 0
-
-        self._ip4am.disconnect(self._ip4am_sigid)
-        self._ip4am_sigid = 0
 
     def _contacts_offline(self, handles):
         """Handle contacts going offline (send message, update set)"""
@@ -523,6 +409,8 @@ class TelepathyPlugin(gobject.GObject):
         self._matches.append(m)
 
     def _subscribe_channel_cb(self, channel):
+        if self._subscribe_channel is not None:
+            return
         # the group of contacts for whom you wish to receive presence
         self._subscribe_channel = channel
         m = channel[CHANNEL_INTERFACE_GROUP].connect_to_signal(
@@ -568,36 +456,14 @@ class TelepathyPlugin(gobject.GObject):
             _logger.warning('%s does not support Connection.Interface.'
                             'Presence', self._conn.object_path)
 
-    def start(self):
-        """Start up the Telepathy networking connections
+        properties = {
+                CHANNEL + '.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+                CHANNEL + '.TargetHandleType': HANDLE_TYPE_LIST,
+                CHANNEL + '.TargetID': 'subscribe',
+                }
+        properties = dbus.Dictionary(properties, signature='sv')
+        connection = self._conn[CONNECTION_INTERFACE_REQUESTS]
+        is_ours, channel_path, properties = connection.EnsureChannel(properties)
 
-        if we are already connected, query for the initial contact
-        information.
-
-        if we are already connecting, do nothing
-
-        otherwise initiate a connection and transfer control to
-            _connect_reply_cb or _connect_error_cb
-        """
-
-        if self._ip4am_sigid == 0:
-            self._ip4am_sigid = self._ip4am.connect('address-changed',
-                    self._ip4_address_changed_cb)
-
-        if self._conn is not None:
-            return
-
-        _logger.debug("%r: Starting up...", self)
-
-        # Only init connection if we have a valid IP address
-        if self._could_connect():
-            # Reread account info in case the server changed
-            self._account = self._get_account_info()
-            self._init_connection()
-        else:
-            _logger.debug('%r: Postponing connection', self)
-
-    def _ip4_address_changed_cb(self, ip4am, address, iface):
-        _logger.debug("::: IP4 address now %s", address)
-
-        self._reconnect_timeout = self._RECONNECT_INITIAL_TIMEOUT
+        channel = Channel(self._conn.service_name, channel_path)
+        self._subscribe_channel_cb(channel)

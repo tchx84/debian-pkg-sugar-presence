@@ -53,65 +53,11 @@ class LinkLocalPlugin(TelepathyPlugin):
     def __init__(self, registry, owner):
         TelepathyPlugin.__init__(self, registry, owner)
 
-        self._have_avahi = False
-        self._watch = None
-        # Glib source ID indicating we have to wait before be allowed to try
-        # to connect
-        self._have_to_wait_id = 0
-        self._find_avahi()
-
-    def _find_avahi(self):
-        try:
-            sys_bus = SystemBus()
-            self._watch = sys_bus.watch_name_owner('org.freedesktop.Avahi',
-                self._avahi_owner_cb)
-
-        except DBusException:
-            _logger.exception('Error connecting to Avahi')
-
-    def _avahi_owner_cb(self, unique_name):
-        had_avahi = self._have_avahi
-
-        if unique_name:
-            self._have_avahi = True
-            if not had_avahi:
-                if self._backoff_id > 0:
-                    _logger.info('Avahi appeared on the system bus (%s) - '
-                                 'will start when retry time is reached')
-                else:
-                    _logger.info('Avahi appeared on the system bus (%s) - '
-                                 'starting...', unique_name)
-                    self.emit('want-to-connect')
-        else:
-            self._have_avahi = False
-            if had_avahi:
-                _logger.info('Avahi disappeared from the system bus - '
-                             'stopping...')
-                self._stop()
-
     def cleanup(self):
         TelepathyPlugin.cleanup(self)
         if self._watch is not None:
             self._watch.cancel()
         self._watch = None
-
-    def _could_connect(self):
-        return TelepathyPlugin._could_connect(self) and self._have_avahi and \
-                self._have_to_wait_id == 0
-
-    def _get_account_info(self):
-        """Retrieve connection manager parameters for this account
-        """
-        server = self._owner.get_server()
-        khash = psutils.pubkey_to_keyid(self._owner.props.key)
-
-        return {
-            'nickname': '%s' % self._owner.props.nick,
-            'first-name': ' ',
-            'last-name': '%s' % self._owner.props.nick,
-            'jid': '%s@%s' % (khash, server),
-            'published-name': '%s' % khash[:8],
-            }
 
     def _find_existing_connection(self):
         """Try to find an existing Telepathy connection to this server
@@ -202,29 +148,6 @@ class LinkLocalPlugin(TelepathyPlugin):
                 ret[handle] = 'salut/' + psutils.escape_identifier(ident)
 
         return ret
-
-
-    def _have_to_wait_cb(self):
-        if self._have_to_wait_id > 0:
-            gobject.source_remove(self._have_to_wait_id)
-            self._have_to_wait_id = 0
-
-        _logger.debug("Timeout elapsed. Salut can connect now")
-        self.emit('want-to-connect')
-
-    def _ip4_address_changed_cb(self, ip4am, address, iface):
-        TelepathyPlugin._ip4_address_changed_cb(self, ip4am, address, iface)
-
-        # FIXME: what about IPv6 ?
-        if iface == "msh0" and not address.startswith("169.254."):
-            # msh0 got a not link-local IP so we are connected to a school
-            # server.  Let's disable Salut. See #6299 for details.
-            _logger.debug("Connected to a school server. Disable Salut")
-            self._stop()
-
-            # Salut can't connect during the next 2 minutes
-            self._have_to_wait_id = gobject.timeout_add(120000,
-                    self._have_to_wait_cb)
 
     def _handle_is_channel_specific(self, handle):
         # Salut doesn't have channel specific handles
