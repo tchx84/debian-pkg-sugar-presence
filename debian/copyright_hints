@@ -11,6 +11,7 @@ Files: ./Makefile.am,
 	./debian/gbp.conf,
 	./debian/pycompat,
 	./debian/source/format,
+	./debian/source/local-options,
 	./debian/watch,
 	./src/Makefile.am,
 	./src/__init__.py,
@@ -69,7 +70,7 @@ Copyright: 1992-1996, 1998-2001
 	2003-2006, Free Software Foundation, Inc
 	2004-2005, Free Software Foundation, Inc
 	2006, 2008 Free Software Foundation, Inc
-	2008, Free Software Foundation, Inc
+	2009, Free Software Foundation, Inc
 License: UNKNOWN
  FIXME
 
