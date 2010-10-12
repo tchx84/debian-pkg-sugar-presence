@@ -34,6 +34,7 @@ from psutils import (NotFoundError, NotJoinedError, WrongConnectionError,
 
 
 CONN_INTERFACE_ACTIVITY_PROPERTIES = 'org.laptop.Telepathy.ActivityProperties'
+CONN_INTERFACE_BUDDY_INFO = 'org.laptop.Telepathy.BuddyInfo'
 
 _ACTIVITY_PATH = "/org/laptop/Sugar/Presence/Activities/"
 _ACTIVITY_INTERFACE = "org.laptop.Sugar.Presence.Activity"
@@ -221,9 +222,8 @@ class Activity(ExportedGObject):
                 _logger.warning('Failed to get initial activity properties '
                                 'for %s: %s', self._id, e)
 
-            conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].GetProperties(self._room,
-                    reply_handler=self.set_properties,
-                    error_handler=got_properties_err)
+            properties = conn[CONN_INTERFACE_ACTIVITY_PROPERTIES].GetProperties(self._room)
+            self.set_properties(properties)
 
     def __repr__(self):
         return '<Activity #%s (ID %s) at %x>' % (self._object_id,
@@ -958,6 +958,16 @@ class Activity(ExportedGObject):
             error_handler=lambda e: self._join_failed_cb(e,
                 'Activity._join_activity_create_channel_cb'))
 
+        conn[CONN_INTERFACE_BUDDY_INFO].AddActivity(
+            self._id,
+            self._room,
+            reply_handler=self.__added_activity_cb,
+            error_handler=lambda e: self._join_failed_cb(e,
+                    'BuddyInfo.AddActivity'))
+
+    def __added_activity_cb(self):
+        _logger.debug('Activity.__added_activity_cb')
+
     def _join_activity_got_handles_cb(self, handles):
         assert len(handles) == 1
 
@@ -1020,7 +1030,7 @@ class Activity(ExportedGObject):
             conn = self._tp.get_connection()
 
             conn[CONN_INTERFACE].RequestHandles(HANDLE_TYPE_ROOM,
-                [self._tp.suggest_room_for_activity(self._id)],
+                [self._id],
                 reply_handler=self._join_activity_got_handles_cb,
                 error_handler=lambda e: self._join_failed_cb(e,
                     'Activity.join RequestHandles'))

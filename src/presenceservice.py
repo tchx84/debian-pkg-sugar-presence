@@ -29,7 +29,8 @@ from telepathy.client import ManagerRegistry
 from telepathy.interfaces import (CONN_INTERFACE_AVATARS,
                                   CONN_INTERFACE_ALIASING)
 from telepathy.constants import (CONNECTION_STATUS_CONNECTED,
-                                 CONNECTION_STATUS_DISCONNECTED)
+                                 CONNECTION_STATUS_DISCONNECTED,
+                                 CONNECTION_STATUS_REASON_NONE_SPECIFIED)
 
 from sugar import util
 
@@ -125,7 +126,11 @@ class PresenceService(ExportedGObject):
             tp.connect('private-invitation',
                                         self._private_invitation)
             tp.connect('want-to-connect', self._want_to_connect)
-            tp.start()
+
+            connection = tp.get_connection()
+            if connection is not None:
+                status = connection.GetStatus()
+                self._tp_status_cb(tp, status, CONNECTION_STATUS_REASON_NONE_SPECIFIED)
 
         self._contacts_online_queue = []
 
@@ -148,21 +153,8 @@ class PresenceService(ExportedGObject):
     def _tp_status_cb(self, plugin, status, reason):
         if status == CONNECTION_STATUS_CONNECTED:
             self._tp_connected(plugin)
-            if (plugin == self._server_plugin and self._ll_plugin) or \
-                (plugin == self._ll_plugin and self._server_plugin and \
-                    self._server_plugin.status == CONNECTION_STATUS_CONNECTED):
-                # For now, Gabble takes precedence over Salut to alleviate
-                # corner cases where laptops on mesh can't talk to ones on APs
-                _logger.debug("Gabble takes precedence, disconnect Salut")
-                self._ll_plugin.cleanup()
         else:
             self._tp_disconnected(plugin)
-            if plugin == self._server_plugin and self._ll_plugin and \
-               status == CONNECTION_STATUS_DISCONNECTED:
-                # For now, Gabble takes precedence over Salut to alleviate
-                # corner cases where laptops on mesh can't talk to ones on APs
-                if self._ll_plugin.status == CONNECTION_STATUS_DISCONNECTED:
-                    self._ll_plugin.start()
 
     def _tp_connected(self, tp):
         self._connected_plugins.add(tp)
@@ -623,8 +615,25 @@ class PresenceService(ExportedGObject):
                          out_signature="o")
     def GetActivityById(self, actid):
         act = self._activities_by_id.get(actid, None)
-        if not act or not act.props.valid:
-            raise NotFoundError("The activity was not found.")
+        if act is None or not act.props.valid:
+            tp = self._get_preferred_plugin()
+
+            connection = tp.get_connection()
+            connection = connection[CONN_INTERFACE_ACTIVITY_PROPERTIES]
+
+            room_handle = None
+            try:
+                room_handle = connection.GetActivity(actid)
+            except dbus.exceptions.DBusException, e:
+                if e.get_dbus_name() != 'org.freedesktop.Telepathy.Error.NotAvailable':
+                    raise
+
+            if room_handle is not None:
+                act = self._new_activity(actid, tp, room_handle)
+
+            if not act or not act.props.valid:
+                raise NotFoundError("The activity was not found.")
+
         return act.object_path()
 
     @dbus.service.method(PRESENCE_INTERFACE, in_signature='',
