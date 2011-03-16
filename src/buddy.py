@@ -862,14 +862,9 @@ class ShellOwner(GenericOwner):
         if not isinstance(nick, unicode):
             nick = unicode(nick, 'utf-8')
 
-        icon_file = os.path.join(env.get_profile_path(), "buddy-icon.jpg")
-        f = open(icon_file, "r")
-        icon = f.read()
-        f.close()
-
         GenericOwner.__init__(self, ps, bus,
                 'keyid/' + psutils.pubkey_to_keyid(key),
-                key=key, nick=nick, color=color, icon=icon, key_hash=key_hash,
+                key=key, nick=nick, color=color, icon=None, key_hash=key_hash,
                 tags=tags)
 
         # Ask to get notifications on Owner object property changes in the
