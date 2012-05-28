@@ -19,10 +19,11 @@ Conflicts: ${cdbs:Conflicts}
 Replaces: ${cdbs:Replaces}
 XB-Python-Version: ${python:Versions}
 Description: Sugar graphical shell - presence service
- Sugar is a graphical user interface aimed at children.
+Description: web browsing activity for the Sugar graphical shell
+ Sugar is a desktop environment. It is conceived as a platform upon
+ which children learn with Sugar Activities. The platform provides
+ mechanisms for collaboration, reflection, and exploration. Sugar
+ Activities cover a broad range of applications: browsing, drawing,
+ composing, writing, programming, etc.
  .
- Originating as intregral part of the OLPC "XO" a.k.a. the $100 laptop,
- Sugar has since grown into a more widely usable low-ressource desktop
- environment for kids.
- .
- This package contains the presence service.
+ This package contains the (deprecated but still used) presence service.
