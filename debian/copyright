@@ -34,7 +34,7 @@ License: Expat~X with X exception
  from the X Consortium.
 
 Files: configure
-Copyright: 1992-1996,1998-2009, Free Software Foundation, Inc.
+Copyright: 1992-1996,1998-2010, Free Software Foundation, Inc.
 License: GAP~configure
 
 Files: aclocal.m4
