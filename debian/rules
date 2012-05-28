@@ -46,7 +46,7 @@ CDBS_BUILD_DEPENDS += , python-dbus, python-gobject | python-gtk2 (<< 2.9), open
 CDBS_DEPENDS_DEFAULT = python-sugar-toolkit-$(pkgbranch)
 CDBS_DEPENDS_DEFAULT += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
 CDBS_DEPENDS_DEFAULT += , telepathy-gabble, telepathy-salut, net-tools
-CDBS_RECOMMENDS_DEFAULT = sugar-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
+CDBS_RECOMMENDS_DEFAULT = sugar-session-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
 CDBS_PROVIDES_DEFAULT = $(pkgbase)
