@@ -17,7 +17,6 @@ Provides: ${python:Provides}, ${cdbs:Provides}
 Conflicts: ${cdbs:Conflicts}
 Replaces: ${cdbs:Replaces}
 Description: Sugar graphical shell - presence service
-Description: web browsing activity for the Sugar graphical shell
  Sugar is a desktop environment. It is conceived as a platform upon
  which children learn with Sugar Activities. The platform provides
  mechanisms for collaboration, reflection, and exploration. Sugar
