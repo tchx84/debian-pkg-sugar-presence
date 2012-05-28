@@ -4,8 +4,8 @@ Priority: optional
 Maintainer: Debian OLPC <debian-olpc-devel@lists.alioth.debian.org>
 Uploaders: Jonas Smedegaard <dr@jones.dk>
 Build-Depends: devscripts,
+ python (>= 2.6.5),
  cdbs (>= 0.4.97~),
- python,
  debhelper,
  dh-buildinfo,
  python-dbus,

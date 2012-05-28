@@ -1,5 +1,8 @@
-sugar-presence-service-0.90 (0.90.1-2) UNRELEASED; urgency=low
+sugar-presence-service-0.90 (0.90.2-1) unstable; urgency=low
 
+  * New upstream release.
+
+  [ Jonas Smedegaard ]
   * Remove debian/source/local-options: abort-on-upstream-changes and
     unapply-patches are default in dpkg-source since 1.16.1.
   * Bump debhelper compatibility level to 7.
@@ -19,8 +22,11 @@ sugar-presence-service-0.90 (0.90.1-2) UNRELEASED; urgency=low
     + Stop build-depending on python-central: No longer used.
     + Relax build-depend unversioned on debhelper and devscripts: Needed
       versions satisfied even in oldstable.
+  * Extend years in copyright file.
+  * Bump branch to 0.96.
+  * Fix recommend sugar-session (not bogus sugar).
 
- -- Jonas Smedegaard <dr@jones.dk>  Mon, 28 May 2012 22:24:18 +0200
+ -- Jonas Smedegaard <dr@jones.dk>  Mon, 28 May 2012 22:37:45 +0200
 
 sugar-presence-service-0.90 (0.90.1-1) unstable; urgency=low
 
