@@ -3,20 +3,18 @@ Section: x11
 Priority: optional
 Maintainer: Debian OLPC <debian-olpc-devel@lists.alioth.debian.org>
 Uploaders: Jonas Smedegaard <dr@jones.dk>
-Build-Depends: devscripts (>= 2.10.7~),
- python-central,
- cdbs (>= 0.4.75~),
+Build-Depends: devscripts,
+ cdbs (>= 0.4.97~),
  python,
- debhelper (>= 6),
+ debhelper,
  dh-buildinfo,
  python-dbus,
  python-gobject | python-gtk2 (<< 2.9),
  openssh-client
-Standards-Version: 3.9.1
+Standards-Version: 3.9.3
 Vcs-Git: git://git.debian.org/git/collab-maint/sugar-presence-service.git
-Vcs-Browser: http://git.debian.org/?p=collab-maint/sugar-presence-service.git;a=summary
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/sugar-presence-service.git
 Homepage: http://wiki.sugarlabs.org/go/Sugar
-XS-Python-Version: all
 
 Package: sugar-presence-service-0.90
 Architecture: all
@@ -25,12 +23,11 @@ Recommends: ${cdbs:Recommends}
 Provides: ${python:Provides}, ${cdbs:Provides}
 Conflicts: ${cdbs:Conflicts}
 Replaces: ${cdbs:Replaces}
-XB-Python-Version: ${python:Versions}
 Description: Sugar graphical shell - presence service
- Sugar is a graphical user interface aimed at children.
+ Sugar is a desktop environment. It is conceived as a platform upon
+ which children learn with Sugar Activities. The platform provides
+ mechanisms for collaboration, reflection, and exploration. Sugar
+ Activities cover a broad range of applications: browsing, drawing,
+ composing, writing, programming, etc.
  .
- Originating as intregral part of the OLPC "XO" a.k.a. the $100 laptop,
- Sugar has since grown into a more widely usable low-ressource desktop
- environment for kids.
- .
- This package contains the presence service.
+ This package contains the (deprecated but still used) presence service.
