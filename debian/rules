@@ -28,7 +28,7 @@ CDBS_BUILD_DEPENDS_class_python-autotools_python = python$(cdbs_python_nondefaul
 
 pkgbase = sugar-presence-service
 pkgbranch = 0.96
-pkg = $(pkgbase)-$(pkgbranch)
+pkg = $(pkgbase)-0.90
 
 DEB_UPSTREAM_PACKAGE = $(pkgbase)
 DEB_UPSTREAM_URL = http://download.sugarlabs.org/sources/sucrose/glucose/$(DEB_UPSTREAM_PACKAGE)
