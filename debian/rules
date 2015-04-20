@@ -27,7 +27,8 @@ include /usr/share/cdbs/1/class/python-autotools.mk
 include /usr/share/cdbs/1/rules/debhelper.mk
 
 # Suppress unneeded auto-resolved build-dependency on python-dev
-CDBS_BUILD_DEPENDS_class_python-autotools_python = python$(cdbs_python_nondefault_version)
+#  * TODO: drop cdbs_python_binary fallback when cdbs 0.5 is stable
+CDBS_BUILD_DEPENDS_class_python-autotools_python = $(or $(cdbs_curpythonruntime),$(cdbs_python_binary))
 
 pkgbranch = $(lastword $(subst -,$(space),$(pkg)))
 pkgbase = $(pkg:%-$(pkgbranch)=%)
