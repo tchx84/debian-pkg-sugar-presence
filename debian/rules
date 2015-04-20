@@ -39,15 +39,14 @@ DEB_MAKE_CHECK_TARGET = check
 
 # Needed by upstream unittests
 #  openssh-client contains ssh-keygen
-#  pygtk << 2.9 contained gobject
-CDBS_BUILD_DEPENDS += , python-dbus, python-gobject | python-gtk2 (<< 2.9), openssh-client
+CDBS_BUILD_DEPENDS += , python-dbus, python-gobject, openssh-client
 
 # Needed (always/often) at runtime
-#  net-tools (route) needed as fallback for NetworkManager 0.7
+#  net-tools (route) needed as fallback for NetworkManager
 CDBS_DEPENDS_$(pkg) = python-sugar-toolkit-$(pkgbranch)
-CDBS_DEPENDS_$(pkg) += , python-gobject, python-dbus (>= 0.82.0), python-telepathy
+CDBS_DEPENDS_$(pkg) += , python-gobject, python-dbus, python-telepathy
 CDBS_DEPENDS_$(pkg) += , telepathy-gabble, telepathy-salut, net-tools
-CDBS_RECOMMENDS_$(pkg) = sugar-session-$(pkgbranch), avahi-daemon, network-manager (>= 0.7)
+CDBS_RECOMMENDS_$(pkg) = sugar-session-$(pkgbranch), avahi-daemon, network-manager
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
 CDBS_PROVIDES_$(pkg) = $(pkgbase)
