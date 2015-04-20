@@ -1,5 +1,5 @@
 Source: sugar-presence-service-0.90
-Section: x11
+Section: oldlibs
 Priority: optional
 Maintainer: Debian Sugar Team <pkg-sugar-devel@lists.alioth.debian.org>
 Uploaders: Jonas Smedegaard <dr@jones.dk>
