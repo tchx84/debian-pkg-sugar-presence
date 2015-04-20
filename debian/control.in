@@ -20,10 +20,9 @@ Provides: ${cdbs:Provides},
 Conflicts: ${cdbs:Conflicts}
 Replaces: ${cdbs:Replaces}
 Description: Sugar graphical shell - presence service
- Sugar is a desktop environment. It is conceived as a platform upon
- which children learn with Sugar Activities. The platform provides
- mechanisms for collaboration, reflection, and exploration. Sugar
- Activities cover a broad range of applications: browsing, drawing,
- composing, writing, programming, etc.
+ Sugar Learning Platform promotes collaborative learning through Sugar
+ Activities that encourage critical thinking, the heart of a quality
+ education.  Designed from the ground up especially for children, Sugar
+ offers an alternative to traditional “office-desktop” software.
  .
  This package contains the (deprecated but still used) presence service.
