@@ -46,7 +46,7 @@ CDBS_BUILD_DEPENDS += , python-dbus, python-gobject, openssh-client
 CDBS_DEPENDS_$(pkg) = python-sugar-toolkit-0.98
 CDBS_DEPENDS_$(pkg) += , python-gobject, python-dbus, python-telepathy
 CDBS_DEPENDS_$(pkg) += , telepathy-gabble, telepathy-salut, net-tools
-CDBS_RECOMMENDS_$(pkg) = sugar-session-$(pkgbranch), avahi-daemon, network-manager
+CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
 CDBS_PROVIDES_$(pkg) = $(pkgbase)
