@@ -16,8 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# These need to be declared before CDBS includes
+pkg = $(DEB_SOURCE_PACKAGE)
 DEB_BUILDDIR = build
-DEB_PYTHON2_MODULE_PACKAGES = sugar-presence-service-0.90
+DEB_PYTHON2_MODULE_PACKAGES = $(pkg)
+
 include /usr/share/cdbs/1/rules/upstream-tarball.mk
 include /usr/share/cdbs/1/rules/utils.mk
 include /usr/share/cdbs/1/class/python-autotools.mk
@@ -26,29 +29,28 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 # Suppress unneeded auto-resolved build-dependency on python-dev
 CDBS_BUILD_DEPENDS_class_python-autotools_python = python$(cdbs_python_nondefault_version)
 
-pkgbase = sugar-presence-service
-pkgbranch = 0.96
-pkg = $(pkgbase)-0.90
+pkgbranch = $(lastword $(subst -,$(space),$(pkg)))
+pkgbase = $(pkg:%-$(pkgbranch)=%)
 
 DEB_UPSTREAM_PACKAGE = $(pkgbase)
 DEB_UPSTREAM_URL = http://download.sugarlabs.org/sources/sucrose/glucose/$(DEB_UPSTREAM_PACKAGE)
 DEB_UPSTREAM_TARBALL_EXTENSION = tar.bz2
 DEB_UPSTREAM_TARBALL_MD5 = bb53b4dc20e81697deb5124fc2cd0fc6
 
-DEB_MAKE_CHECK_TARGET = check
-
 # Needed by upstream unittests
 #  openssh-client contains ssh-keygen
-CDBS_BUILD_DEPENDS += , python-dbus, python-gobject, openssh-client
+CDBS_BUILD_DEPENDS +=, python-dbus, python-gobject, openssh-client
 
 # Needed (always/often) at runtime
 #  net-tools (route) needed as fallback for NetworkManager
 CDBS_DEPENDS_$(pkg) = python-sugar-toolkit-0.98
-CDBS_DEPENDS_$(pkg) += , python-gobject, python-dbus, python-telepathy
-CDBS_DEPENDS_$(pkg) += , telepathy-gabble, telepathy-salut, net-tools
+CDBS_DEPENDS_$(pkg) +=, python-gobject, python-dbus, python-telepathy
+CDBS_DEPENDS_$(pkg) +=, telepathy-gabble, telepathy-salut, net-tools
 CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
 
 # Ensure only one variant is installed at a time (Debian Policy 7.6.2)
 CDBS_PROVIDES_$(pkg) = $(pkgbase)
 CDBS_CONFLICTS_$(pkg) = $(pkgbase)
 CDBS_REPLACES_$(pkg) = $(pkgbase)
+
+DEB_MAKE_CHECK_TARGET = check
