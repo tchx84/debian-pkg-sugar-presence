@@ -11,9 +11,12 @@ Homepage: http://wiki.sugarlabs.org/go/Sugar
 
 Package: sugar-presence-service-0.90
 Architecture: all
-Depends: ${shlibs:Depends}, ${python:Depends}, ${cdbs:Depends}, ${misc:Depends}
+Depends: ${cdbs:Depends},
+ ${misc:Depends},
+ ${python:Depends}
 Recommends: ${cdbs:Recommends}
-Provides: ${python:Provides}, ${cdbs:Provides}
+Provides: ${cdbs:Provides},
+ ${python:Provides}
 Conflicts: ${cdbs:Conflicts}
 Replaces: ${cdbs:Replaces}
 Description: Sugar graphical shell - presence service
