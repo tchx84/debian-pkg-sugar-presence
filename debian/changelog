@@ -1,3 +1,35 @@
+sugar-presence-service-0.90 (0.90.2-2) unstable; urgency=medium
+
+  * Bump debhelper compatibility level to 8.
+  * Move packaging to Debian Sugar Team.
+  * Declare compliance with Debian Policy 3.9.6.
+  * Wrap and sort package relations fields.
+  * Update package relations:
+    + Fix stop recommend sugar-session-*.
+    + Stop bogusly depend on shlibs:Depends: Irrelevant for
+      arch-independent packages.
+    + Relax to build-depend unversioned on python and relax versioning
+      of cdbs: Needed versions satisfied even in oldstable.
+    + Relax to drop fallback for python-gobject and versioning of
+      python-dbus and network-manager: Needed versions satisfied even in
+      oldstable.
+    + Recommend python-sugar-toolkit-0.98 - i.e. newest and likely last
+      branch (not python-sugar-toolkit-0.96).
+    + Make build-dependency suppression future compatible with cdbs 0.5.
+  * Modernize long description.
+  * Move to section oldlibs: Deprecated upstream.
+  * Track xz compressed upstream tarballs (but favor bzip2).
+  * Rewrite README.source to emphasize that control.in file is *not* a
+    show-stopper for contributions, and refer to wiki page for details.
+  * Stop track upstream tarball checksum.
+  * Update copyright info:
+    + Fix use SPDX shortname for X11 license.
+      Thanks to Paul Richards Tagliamonte.
+    + Extend coverage for myself.
+    + Relicense packaging as GPL-3+.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Mon, 20 Apr 2015 15:22:49 +0200
+
 sugar-presence-service-0.90 (0.90.2-1) unstable; urgency=low
 
   * New upstream release.

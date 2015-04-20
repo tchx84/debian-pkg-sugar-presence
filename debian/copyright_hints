@@ -56,7 +56,7 @@ License: UNKNOWN
 
 Files: aclocal.m4
  configure
-Copyright: 1992-1996, 1998-2001
+Copyright: 1992-1996, 1998-2001,
   1996, 1998, 2000-2005, 2008
   1996-1997, 2000-2001, 2003, 2005, 2008
   1996-2004,
@@ -75,23 +75,13 @@ Copyright: 1992-1996, 1998-2001
 License: UNKNOWN
  FIXME
 
-Files: missing
-Copyright: 1996-1997, 1999-2000, 2002-2006
-License: GPL-2+
+Files: install-sh
+Copyright: 1994, X Consortium
+License: Expat
  FIXME
 
-Files: COPYING
-Copyright: 1989, 1991 Free Software Foundation, Inc.
-  <year> <name of author>
-  HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-  HOLDERS AND/OR OTHER PARTIES
-  disclaimer" for the program, if
-  holder saying it may be distributed
-  holder who places the Program under this License
-  interest in the program
-  law:
-  the software, and
-  year name of author
+Files: missing
+Copyright: 1996-1997, 1999-2000, 2002-2006
 License: GPL-2+
  FIXME
 
@@ -108,12 +98,18 @@ License: GPL-2+
  FIXME
 
 Files: debian/rules
-Copyright: 2008-2010, 2012 Jonas Smedegaard <dr@jones.dk>
-License: GPL-2+
+Copyright: 2008-2010, 2012, 2015, Jonas Smedegaard <dr@jones.dk>
+License: GPL-3+
  FIXME
 
-Files: install-sh
-Copyright: 1994, X Consortium
-License: MIT/X11 (BSD like)
+Files: COPYING
+Copyright: 1989, 1991 Free Software Foundation, Inc.
+  <year> <name of author>
+  disclaimer" for the program, if
+  interest in the program
+  law:
+  the software, and
+  year name of author
+License: GPL-ever
  FIXME
 
