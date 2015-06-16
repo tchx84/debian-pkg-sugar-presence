@@ -44,7 +44,8 @@ CDBS_BUILD_DEPENDS +=, python-dbus, python-gobject, openssh-client
 #  net-tools (route) needed as fallback for NetworkManager
 CDBS_DEPENDS_$(pkg) = python-sugar-toolkit
 CDBS_DEPENDS_$(pkg) +=, python-gobject, python-dbus, python-telepathy
-CDBS_DEPENDS_$(pkg) +=, telepathy-gabble, telepathy-salut, net-tools
+CDBS_DEPENDS_$(pkg) +=, telepathy-gabble, telepathy-salut
+CDBS_DEPENDS_$(pkg) +=, network-manager | net-tools
 CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
 
 DEB_MAKE_CHECK_TARGET = check
