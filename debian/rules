@@ -31,9 +31,8 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 CDBS_BUILD_DEPENDS_class_python-autotools_python = $(or $(cdbs_curpythonruntime),$(cdbs_python_binary))
 
 pkgbranch = $(basename $(DEB_UPSTREAM_VERSION))
-pkgbase = $(pkg:%-$(pkgbranch)=%)
 
-DEB_UPSTREAM_PACKAGE = $(pkgbase)
+DEB_UPSTREAM_PACKAGE = $(pkg)
 DEB_UPSTREAM_URL = http://download.sugarlabs.org/sources/sucrose/glucose/$(DEB_UPSTREAM_PACKAGE)
 DEB_UPSTREAM_TARBALL_EXTENSION = tar.bz2
 
@@ -47,10 +46,5 @@ CDBS_DEPENDS_$(pkg) = python-sugar-toolkit-0.98
 CDBS_DEPENDS_$(pkg) +=, python-gobject, python-dbus, python-telepathy
 CDBS_DEPENDS_$(pkg) +=, telepathy-gabble, telepathy-salut, net-tools
 CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
-
-# Ensure only one variant is installed at a time (Debian Policy 7.6.2)
-CDBS_PROVIDES_$(pkg) = $(pkgbase)
-CDBS_CONFLICTS_$(pkg) = $(pkgbase)
-CDBS_REPLACES_$(pkg) = $(pkgbase)
 
 DEB_MAKE_CHECK_TARGET = check
