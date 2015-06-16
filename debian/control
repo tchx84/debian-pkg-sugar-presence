@@ -1,4 +1,4 @@
-Source: sugar-presence-service-0.90
+Source: sugar-presence-service
 Section: oldlibs
 Priority: optional
 Maintainer: Debian Sugar Team <pkg-sugar-devel@lists.alioth.debian.org>
@@ -16,17 +16,14 @@ Vcs-Git: git://anonscm.debian.org/pkg-sugar/sugar-presence-service.git
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-sugar/sugar-presence-service.git
 Homepage: http://wiki.sugarlabs.org/go/Sugar
 
-Package: sugar-presence-service-0.90
+Package: sugar-presence-service
 Architecture: all
 Depends: ${cdbs:Depends},
  ${misc:Depends},
  ${python:Depends}
 Recommends: ${cdbs:Recommends}
-Provides: ${cdbs:Provides},
- ${python:Provides}
-Conflicts: ${cdbs:Conflicts}
-Replaces: ${cdbs:Replaces}
-Description: Sugar graphical shell - presence service
+Provides: ${python:Provides}
+Description: Sugar Learning Platform - legacy presence service
  Sugar Learning Platform promotes collaborative learning through Sugar
  Activities that encourage critical thinking, the heart of a quality
  education.  Designed from the ground up especially for children, Sugar

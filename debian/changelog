@@ -1,3 +1,19 @@
+sugar-presence-service (0.90.2-1) UNRELEASED; urgency=medium
+
+  * Improve short description.
+  * Update copyright info:
+    + Use License-Grant and License-Reference fields.
+      Thanks to Ben Finney.
+  * Add lintian overrides regarding license in License-Reference field.
+    See bug#786450.
+  * Modernize git-buildpackage config: Avoid "git-" prefix.
+  * Drop branch from source and binary package.
+  * Update package relations:
+    + Depend on unbranched python-sugar-toolkit.
+    + Fix depend on net-tools only as fallback for network-manager.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 16 Jun 2015 08:23:02 -0500
+
 sugar-presence-service-0.90 (0.90.2-2) unstable; urgency=medium
 
   * Bump debhelper compatibility level to 8.
