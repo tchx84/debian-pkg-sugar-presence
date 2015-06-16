@@ -1,4 +1,4 @@
-sugar-presence-service (0.90.2-1) UNRELEASED; urgency=medium
+sugar-presence-service (0.90.2-3) unstable; urgency=medium
 
   * Improve short description.
   * Update copyright info:
@@ -12,7 +12,7 @@ sugar-presence-service (0.90.2-1) UNRELEASED; urgency=medium
     + Depend on unbranched python-sugar-toolkit.
     + Fix depend on net-tools only as fallback for network-manager.
 
- -- Jonas Smedegaard <dr@jones.dk>  Tue, 16 Jun 2015 08:23:02 -0500
+ -- Jonas Smedegaard <dr@jones.dk>  Tue, 16 Jun 2015 08:26:05 -0500
 
 sugar-presence-service-0.90 (0.90.2-2) unstable; urgency=medium
 
