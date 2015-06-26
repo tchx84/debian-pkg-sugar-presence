@@ -1,3 +1,13 @@
+sugar-presence-service (0.90.2-4) unstable; urgency=medium
+
+  * Update package relations:
+    + Fix depend on telepathy-gabble-legacy or older telepathy-gabble
+      (not recent telepathy-gabble): Old Tubes API needed.
+  * Bump debhelper compatibility level to 9.
+  * Add lintian override regarding debhelper 9.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 26 Jun 2015 11:15:44 -0500
+
 sugar-presence-service (0.90.2-3) unstable; urgency=medium
 
   * Improve short description.
