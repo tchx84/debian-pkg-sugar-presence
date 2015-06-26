@@ -30,6 +30,10 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 #  * TODO: drop cdbs_python_binary fallback when cdbs 0.5 is stable
 CDBS_BUILD_DEPENDS_class_python-autotools_python = $(or $(cdbs_curpythonruntime),$(cdbs_python_binary))
 
+# Build-depend unversioned on debhelper
+#  TODO: Drop when adopted in cdbs
+CDBS_BUILD_DEPENDS_rules_debhelper_v9 = debhelper
+
 pkgbranch = $(basename $(DEB_UPSTREAM_VERSION))
 
 DEB_UPSTREAM_PACKAGE = $(pkg)
