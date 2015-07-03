@@ -1,3 +1,12 @@
+sugar-presence-service (0.90.2-5) unstable; urgency=medium
+
+  * Relax watch file to cover any compression suffix.
+  * Update package relations:
+    + Relax to recommend versioned telepathy-gabble, and depend on it
+      only unversioned.
+
+ -- Jonas Smedegaard <dr@jones.dk>  Fri, 03 Jul 2015 13:55:57 -0500
+
 sugar-presence-service (0.90.2-4) unstable; urgency=medium
 
   * Update package relations:
