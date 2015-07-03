@@ -49,7 +49,8 @@ CDBS_DEPENDS_$(pkg) = python-sugar-toolkit
 CDBS_DEPENDS_$(pkg) +=, python-gobject, python-dbus, python-telepathy
 CDBS_DEPENDS_$(pkg) +=, telepathy-salut
 CDBS_DEPENDS_$(pkg) +=, network-manager | net-tools
-CDBS_DEPENDS_$(pkg) +=, telepathy-gabble-legacy | telepathy-gabble (<< 0.17.25)
+CDBS_DEPENDS_$(pkg) +=, telepathy-gabble-legacy | telepathy-gabble
 CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
+CDBS_RECOMMENDS_$(pkg) +=, telepathy-gabble-legacy | telepathy-gabble (<< 0.17.25)
 
 DEB_MAKE_CHECK_TARGET = check
