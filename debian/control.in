@@ -15,7 +15,10 @@ Depends: ${cdbs:Depends},
  ${misc:Depends},
  ${python:Depends}
 Recommends: ${cdbs:Recommends}
-Provides: ${python:Provides}
+Provides: ${cdbs:Provides},
+ ${python:Provides}
+Conflicts: ${cdbs:Conflicts}
+Replaces: ${cdbs:Replaces}
 Description: Sugar Learning Platform - legacy presence service
  Sugar Learning Platform promotes collaborative learning through Sugar
  Activities that encourage critical thinking, the heart of a quality

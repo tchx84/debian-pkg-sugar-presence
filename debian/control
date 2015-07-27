@@ -3,7 +3,7 @@ Section: oldlibs
 Priority: optional
 Maintainer: Debian Sugar Team <pkg-sugar-devel@lists.alioth.debian.org>
 Uploaders: Jonas Smedegaard <dr@jones.dk>
-Build-Depends: cdbs (>= 0.4.90~),
+Build-Depends: cdbs (>= 0.4.97~),
  devscripts,
  python,
  debhelper,
@@ -22,7 +22,10 @@ Depends: ${cdbs:Depends},
  ${misc:Depends},
  ${python:Depends}
 Recommends: ${cdbs:Recommends}
-Provides: ${python:Provides}
+Provides: ${cdbs:Provides},
+ ${python:Provides}
+Conflicts: ${cdbs:Conflicts}
+Replaces: ${cdbs:Replaces}
 Description: Sugar Learning Platform - legacy presence service
  Sugar Learning Platform promotes collaborative learning through Sugar
  Activities that encourage critical thinking, the heart of a quality
