@@ -53,4 +53,11 @@ CDBS_DEPENDS_$(pkg) +=, telepathy-gabble-legacy | telepathy-gabble
 CDBS_RECOMMENDS_$(pkg) = avahi-daemon, network-manager
 CDBS_RECOMMENDS_$(pkg) +=, telepathy-gabble-legacy | telepathy-gabble (<< 0.17.25)
 
+# Replace previous package names to avoid conflict
+older-service = sugar-presence-service-0.88
+older-service +=, sugar-presence-service-0.90
+CDBS_PROVIDES_$(pkg) +=, $(older-service)
+CDBS_REPLACES_$(pkg) +=, $(older-service)
+CDBS_CONFLICTS_$(pkg) +=, $(older-service)
+
 DEB_MAKE_CHECK_TARGET = check
